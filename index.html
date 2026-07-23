@@ -165,6 +165,7 @@ h2.sec:first-child { margin-top: 4px; }
 .badge.Present { background: var(--present-soft); color: var(--present); }
 .badge.Absent  { background: var(--absent-soft);  color: var(--absent); }
 .badge.Pending { background: var(--pending-soft); color: var(--pending); }
+.badge.Cancelled { background: var(--amber-soft); color: var(--amber); }
 .pctcell {  font-weight: 800; font-size: 17px; }
 .pctcell.low { color: var(--absent); } .pctcell.ok { color: var(--present); }
 
@@ -176,6 +177,22 @@ h2.sec:first-child { margin-top: 4px; }
 .yn button:active { transform: scale(.9); }
 .yn .yes { background: var(--present-soft); color: var(--present); }
 .yn .no  { background: var(--absent-soft);  color: var(--absent); }
+.yn .nc  { background: var(--amber-soft);   color: var(--amber); }
+
+/* ---------- Swipe-to-mark (ported from the APK's DashboardTab drag gesture) ---------- */
+.swipe-wrap { position: relative; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
+.swipe-bg {
+  position: absolute; inset: 0; display: none; align-items: center;
+  padding: 0 18px; font-weight: 700; font-size: 13.5px;
+}
+.swipe-wrap.dir-left  .swipe-bg { display: flex; background: var(--present-soft); color: var(--present); justify-content: flex-end; }
+.swipe-wrap.dir-right .swipe-bg { display: flex; background: var(--absent-soft);  color: var(--absent);  justify-content: flex-start; }
+.swipe-wrap.dir-down  .swipe-bg { display: flex; background: var(--amber-soft);   color: var(--amber);   justify-content: center; align-items: flex-start; padding-top: 12px; }
+.swipe-card {
+  position: relative; background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: 0 14px; touch-action: none; will-change: transform;
+}
+.swipe-hint { font-size: 11.5px; color: var(--ink-soft); margin: -4px 2px 10px; }
 
 /* ---------- Chips ---------- */
 .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px; scrollbar-width: none; }
@@ -370,6 +387,7 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
         <select id="fStatus">
           <option value="">All statuses</option>
           <option>Present</option><option>Absent</option><option>Pending</option>
+          <option value="Cancelled">No Class</option>
         </select>
       </div>
       <div id="histList"></div>
@@ -437,6 +455,7 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
   <div class="status-opts">
     <button class="btn" style="background:var(--present-soft);color:var(--present)" data-status="Present">✓&nbsp; Present</button>
     <button class="btn" style="background:var(--absent-soft);color:var(--absent)" data-status="Absent">✗&nbsp; Absent</button>
+    <button class="btn" style="background:var(--amber-soft);color:var(--amber)" data-status="Cancelled">⊘&nbsp; No Class</button>
     <button class="btn" style="background:var(--pending-soft);color:var(--pending)" data-status="Pending">⏳&nbsp; Pending</button>
   </div>
   <div class="dlg-actions"><button class="btn ghost" data-close>Cancel</button></div>
@@ -577,14 +596,17 @@ function renderAll() { renderDash(); renderTT(); renderCal(); renderHist(); }
 
 function recordList() { return Object.entries(S.records).map(([key,r]) => ({ key, ...r })); }
 
+const statusLabel = st => st === 'Cancelled' ? 'No Class' : st;
+
 function renderDash() {
   const recs = recordList();
   let present = 0, absent = 0;
   const per = {};
   for (const r of recs) {
-    per[r.subj] ??= { p:0, a:0, pd:0 };
+    per[r.subj] ??= { p:0, a:0, pd:0, c:0 };
     if (r.status === 'Present') { present++; per[r.subj].p++; }
     else if (r.status === 'Absent') { absent++; per[r.subj].a++; }
+    else if (r.status === 'Cancelled') per[r.subj].c++;
     else per[r.subj].pd++;
   }
   const answered = present + absent;
@@ -599,17 +621,26 @@ function renderDash() {
   const pend = recs.filter(r => r.status === 'Pending')
     .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)).slice(0, 12);
   $('#pendingWrap').innerHTML = !pend.length ? '' :
-    `<h2 class="sec">Pending — did you attend?</h2><div class="card tight">` +
+    `<h2 class="sec">Pending — did you attend?</h2>
+     <div class="swipe-hint">Swipe card: ← attended · → absent · ↓ class not taken</div>` +
     pend.map(r => {
       const s = subj(r.subj);
-      return `<div class="row">
-        <span class="dot" style="background:${s.color}"></span>
-        <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${r.date} · ${r.time}</span></span>
-        <span class="yn">
-          <button class="yes" data-key="${r.key}" data-set="Present" aria-label="Present">✓</button>
-          <button class="no"  data-key="${r.key}" data-set="Absent" aria-label="Absent">✗</button>
-        </span></div>`;
-    }).join('') + '</div>';
+      return `<div class="swipe-wrap">
+        <div class="swipe-bg"></div>
+        <div class="swipe-card" data-key="${r.key}">
+          <div class="row">
+            <span class="dot" style="background:${s.color}"></span>
+            <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${r.date} · ${r.time}</span></span>
+            <span class="yn">
+              <button class="yes" data-key="${r.key}" data-set="Present" aria-label="Present">✓</button>
+              <button class="no"  data-key="${r.key}" data-set="Absent" aria-label="Absent">✗</button>
+              <button class="nc"  data-key="${r.key}" data-set="Cancelled" aria-label="No Class">⊘</button>
+            </span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  initSwipes();
 
   // today
   const now = new Date();
@@ -626,10 +657,10 @@ function renderDash() {
         return `<div class="row">
           <span class="dot" style="background:${s.color}"></span>
           <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${t.start} – ${t.end}</span></span>
-          ${r ? `<span class="badge ${r.status}">${r.status}</span>` : '<span class="t2">—</span>'}</div>`;
+          ${r ? `<span class="badge ${r.status}">${statusLabel(r.status)}</span>` : '<span class="t2">—</span>'}</div>`;
       }).join('');
 
-  // per subject
+  // per subject ("No Class" excluded from the percentage, like the APK)
   const keys = Object.keys(per).map(Number);
   $('#statsList').innerHTML = !keys.length ? `<div class="empty">Stats appear once classes are recorded</div>`
     : keys.map(k => {
@@ -638,9 +669,71 @@ function renderDash() {
         const p = ans ? v.p*100/ans : null;
         return `<div class="row">
           <span class="dot" style="background:${s.color}"></span>
-          <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${v.p} present · ${v.a} absent · ${v.pd} pending</span></span>
+          <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${v.p} present · ${v.a} absent · ${v.pd} pending${v.c ? ` · ${v.c} no class` : ''}</span></span>
           <span class="pctcell ${p===null?'':(p<75?'low':'ok')}">${p===null?'—':Math.round(p)+'%'}</span></div>`;
       }).join('');
+}
+
+/* Swipe-to-mark, ported from the APK: left = Present, right = Absent, down = Cancelled ("No Class").
+   Thresholds 120px horizontal / 100px vertical; drag clamped to ±250 / 200 like the APK. */
+function initSwipes() {
+  document.querySelectorAll('#pendingWrap .swipe-card').forEach(card => {
+    let sx = 0, sy = 0, dx = 0, dy = 0, dir = null, active = false;
+    const wrap = card.parentElement;
+    const bg = wrap.querySelector('.swipe-bg');
+    const setDir = d => {
+      wrap.classList.remove('dir-left', 'dir-right', 'dir-down');
+      if (d) wrap.classList.add('dir-' + d);
+      bg.textContent = d === 'left' ? 'Mark Attended ✓' : d === 'right' ? '✗ Mark Absent' : d === 'down' ? '⊘ Class Not Taken' : '';
+    };
+    card.addEventListener('pointerdown', e => {
+      if (e.target.closest('.yn')) return;         // let the buttons work normally
+      active = true; sx = e.clientX; sy = e.clientY; dx = dy = 0; dir = null;
+      if (card.setPointerCapture) try { card.setPointerCapture(e.pointerId); } catch (_) {}
+      card.style.transition = 'none';
+    });
+    card.addEventListener('pointermove', e => {
+      if (!active) return;
+      dx = e.clientX - sx; dy = e.clientY - sy;
+      if (!dir) {
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) dir = dx < 0 ? 'left' : 'right';
+        else if (dy > 10) dir = 'down';
+        if (dir) setDir(dir);
+      }
+      if (dir === 'left' || dir === 'right') {
+        dx = Math.max(-250, Math.min(250, dx));
+        card.style.transform = `translateX(${dx}px)`;
+      } else if (dir === 'down') {
+        dy = Math.max(0, Math.min(200, dy));
+        card.style.transform = `translateY(${dy}px)`;
+      }
+    });
+    const finish = () => {
+      if (!active) return;
+      active = false;
+      card.style.transition = 'transform .18s ease';
+      let status = null;
+      if (dir === 'left' && dx < -120) status = 'Present';
+      else if (dir === 'right' && dx > 120) status = 'Absent';
+      else if (dir === 'down' && dy > 100) status = 'Cancelled';
+      if (status) {
+        card.style.transform = dir === 'down' ? 'translateY(240px)' : `translateX(${dx < 0 ? '-100vw' : '100vw'})`;
+        const r = S.records[card.dataset.key];
+        if (r) { r.status = status; r.at = Date.now(); save(); }
+        setTimeout(() => { renderDash(); renderHist(); }, 180);
+      } else {
+        card.style.transform = '';
+        setDir(null);
+      }
+    };
+    card.addEventListener('pointerup', finish);
+    card.addEventListener('pointercancel', () => {
+      active = false;
+      card.style.transition = 'transform .18s ease';
+      card.style.transform = '';
+      setDir(null);
+    });
+  });
 }
 
 let ttDay = Math.min(((new Date().getDay()+6)%7)+1, 6);
@@ -707,7 +800,7 @@ function renderHist() {
     html += `<div class="row" data-rec="${r.key}" style="cursor:pointer">
       <span class="dot" style="background:${s.color}"></span>
       <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${r.time}</span></span>
-      <span class="badge ${r.status}">${r.status}</span></div>`;
+      <span class="badge ${r.status}">${statusLabel(r.status)}</span></div>`;
     const next = recs[recs.indexOf(r)+1];
     if (!next || next.date !== r.date) html += '</div>';
     lastDate = r.date;
@@ -830,7 +923,7 @@ $('#dReset').addEventListener('click', () => {
 function openStatusDialog(key) {
   editingRec = key;
   const r = S.records[key]; const s = subj(r.subj);
-  $('#dlgStatusInfo').textContent = `${s.name} · ${r.date} · ${r.time} · currently ${r.status}`;
+  $('#dlgStatusInfo').textContent = `${s.name} · ${r.date} · ${r.time} · currently ${statusLabel(r.status)}`;
   $('#dlgStatus').showModal();
 }
 document.querySelectorAll('#dlgStatus [data-status]').forEach(b => b.addEventListener('click', () => {
