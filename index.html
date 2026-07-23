@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Attend — CS&E VII</title>
+<meta name="description" content="Attendance tracker for CS&E VII Sem — Section A & B">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Attend">
+<meta name="theme-color" content="#F6F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12151D" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Schibsted+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F6F1E7;
+  --bg-soft: #EFE7D8;
+  --card: #FFFDF8;
+  --ink: #1A1F2E;
+  --ink-soft: #5A6072;
+  --line: #E2D9C8;
+  --accent: #0F4C3A;
+  --accent-ink: #F6F1E7;
+  --amber: #B26A00;
+  --amber-soft: #F5E3C6;
+  --present: #2E7D32;
+  --present-soft: #DDEEDD;
+  --absent: #C62828;
+  --absent-soft: #F6DCDC;
+  --pending: #B26A00;
+  --pending-soft: #F5E7CC;
+  --radius: 18px;
+  --shadow: 0 1px 2px rgba(26,31,46,.06), 0 6px 18px rgba(26,31,46,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151D;
+    --bg-soft: #181C27;
+    --card: #1B2029;
+    --ink: #EDE8DC;
+    --ink-soft: #9BA1B0;
+    --line: #2A3040;
+    --accent: #58B893;
+    --accent-ink: #0E1219;
+    --amber: #E8A94E;
+    --amber-soft: #3A2F1B;
+    --present: #6FCF7A;
+    --present-soft: #1D3320;
+    --absent: #EF7B7B;
+    --absent-soft: #3B2020;
+    --pending: #E8A94E;
+    --pending-soft: #3A2F1B;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; }
+body {
+  font-family: 'Schibsted Grotesk', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100%;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  background-image: radial-gradient(circle at 15% 8%, color-mix(in srgb, var(--accent) 6%, transparent) 0%, transparent 45%);
+  overscroll-behavior-y: contain;
+}
+h1,h2,h3,.display { font-family: 'Bricolage Grotesque', 'Schibsted Grotesk', sans-serif; }
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+
+/* ---------- Header ---------- */
+header {
+  padding: calc(14px + env(safe-area-inset-top)) 20px 12px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+header .brand { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 24px; letter-spacing: -.5px; }
+header .brand em { font-style: normal; color: var(--accent); }
+header .section-chip {
+  font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-ink); letter-spacing: .3px;
+}
+
+/* ---------- Tabs (bottom) ---------- */
+nav.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: flex; justify-content: space-around;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line);
+}
+nav.tabbar button {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 11px; font-weight: 500; color: var(--ink-soft);
+  padding: 6px 0 4px; border-radius: 14px; transition: color .18s;
+}
+nav.tabbar button svg { width: 24px; height: 24px; stroke-width: 1.7; }
+nav.tabbar button.active { color: var(--accent); font-weight: 700; }
+
+/* ---------- Layout ---------- */
+main { padding: 18px 18px 30px; max-width: 560px; margin: 0 auto; }
+.tab { display: none; animation: rise .28s ease both; }
+.tab.active { display: block; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 16px; margin-bottom: 12px;
+}
+.card.tight { padding: 6px 16px; }
+h2.sec {
+  font-size: 13px; text-transform: uppercase; letter-spacing: .14em;
+  color: var(--ink-soft); margin: 22px 2px 10px; font-weight: 600;
+}
+h2.sec:first-child { margin-top: 4px; }
+
+/* ---------- Hero stat ---------- */
+.hero { position: relative; overflow: hidden; }
+.hero .pct {
+  font-family: 'Bricolage Grotesque'; font-size: 56px; font-weight: 800;
+  letter-spacing: -2px; line-height: 1; color: var(--accent);
+}
+.hero .pct.low { color: var(--absent); }
+.hero .sub { color: var(--ink-soft); font-size: 13px; margin-top: 6px; }
+.hero::after {
+  content: ''; position: absolute; right: -30px; top: -30px; width: 130px; height: 130px;
+  border-radius: 50%; background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.hero .ring { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); }
+
+/* ---------- Rows ---------- */
+.row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.row:last-child { border-bottom: none; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.row .grow { flex: 1; min-width: 0; }
+.row .t1 { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .t2 { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
+.badge {
+  font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; flex: none;
+}
+.badge.Present { background: var(--present-soft); color: var(--present); }
+.badge.Absent  { background: var(--absent-soft);  color: var(--absent); }
+.badge.Pending { background: var(--pending-soft); color: var(--pending); }
+.pctcell { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 17px; }
+.pctcell.low { color: var(--absent); } .pctcell.ok { color: var(--present); }
+
+.yn { display: flex; gap: 8px; flex: none; }
+.yn button {
+  width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+  transition: transform .12s;
+}
+.yn button:active { transform: scale(.9); }
+.yn .yes { background: var(--present-soft); color: var(--present); }
+.yn .no  { background: var(--absent-soft);  color: var(--absent); }
+
+/* ---------- Chips ---------- */
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  padding: 8px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 600;
+  background: var(--card); border: 1px solid var(--line); color: var(--ink-soft);
+  flex: none; transition: all .15s;
+}
+.chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* ---------- Calendar ---------- */
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cal-head .m { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 19px; }
+.cal-head button { width: 38px; height: 38px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.cal-grid .wd { text-align: center; font-size: 11px; color: var(--ink-soft); font-weight: 600; padding: 4px 0; }
+.cal-grid .day {
+  aspect-ratio: 1; border-radius: 12px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-size: 13.5px; font-weight: 600;
+  background: var(--present-soft); color: var(--ink); position: relative; border: none;
+}
+.cal-grid .day.off { background: var(--absent-soft); }
+.cal-grid .day.today { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cal-grid .day .note-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-soft); position: absolute; bottom: 6px; }
+.legend { display: flex; gap: 16px; margin-top: 12px; font-size: 12.5px; color: var(--ink-soft); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 5px; vertical-align: -1px; }
+
+/* ---------- Filters / selects ---------- */
+.filters { display: flex; gap: 8px; margin-bottom: 12px; }
+select {
+  flex: 1; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink);
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 12px; appearance: none; -webkit-appearance: none;
+}
+.datehead { font-family: 'Bricolage Grotesque'; font-weight: 700; font-size: 13px; color: var(--ink-soft); margin: 16px 4px 6px; }
+
+/* ---------- FAB ---------- */
+.fab {
+  position: fixed; right: 18px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 25;
+  width: 56px; height: 56px; border-radius: 18px; background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 35%, transparent);
+  transition: transform .15s;
+}
+.fab:active { transform: scale(.92); }
+
+/* ---------- Dialogs ---------- */
+dialog {
+  border: none; border-radius: 22px; background: var(--card); color: var(--ink);
+  padding: 22px; width: min(92vw, 420px); box-shadow: 0 24px 60px rgba(0,0,0,.3);
+  margin: auto;
+}
+dialog::backdrop { background: rgba(10,12,18,.45); backdrop-filter: blur(3px); }
+dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 5px; }
+.field select, .field input {
+  width: 100%; font: inherit; font-size: 15px; padding: 11px 12px;
+  background: var(--bg-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 12px;
+}
+.dlg-actions { display: flex; gap: 10px; margin-top: 18px; }
+.btn {
+  flex: 1; padding: 13px; border-radius: 14px; font-weight: 700; font-size: 15px;
+  text-align: center; transition: transform .12s;
+}
+.btn:active { transform: scale(.97); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: var(--bg-soft); color: var(--ink); }
+.btn.danger { background: var(--absent-soft); color: var(--absent); flex: 0 0 auto; padding: 13px 16px; }
+.status-opts { display: grid; gap: 8px; }
+.status-opts .btn { display: flex; align-items: center; gap: 10px; justify-content: flex-start; padding-left: 16px; }
+
+/* ---------- Section picker ---------- */
+#picker {
+  position: fixed; inset: 0; z-index: 100; background: var(--bg);
+  display: flex; flex-direction: column; justify-content: center; padding: 32px 26px;
+  background-image: radial-gradient(circle at 80% 12%, color-mix(in srgb, var(--accent) 9%, transparent) 0%, transparent 50%);
+}
+#picker .kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+#picker h1 {
+  font-size: clamp(44px, 13vw, 64px); font-weight: 800; letter-spacing: -2.5px; line-height: .95;
+  margin: 10px 0 6px;
+}
+#picker h1 em { font-style: normal; color: var(--accent); }
+#picker .lede { color: var(--ink-soft); font-size: 15px; margin-bottom: 30px; }
+.pick-card {
+  display: flex; align-items: center; gap: 16px; width: 100%; text-align: left;
+  background: var(--card); border: 1.5px solid var(--line); border-radius: 20px;
+  padding: 18px; margin-bottom: 12px; transition: all .16s; box-shadow: var(--shadow);
+}
+.pick-card .letter {
+  font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 26px;
+  width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center;
+  background: var(--bg-soft); color: var(--ink); transition: all .16s; flex: none;
+}
+.pick-card .pt1 { font-weight: 800; font-size: 17px; }
+.pick-card .pt2 { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+.pick-card.sel { border-color: var(--accent); }
+.pick-card.sel .letter { background: var(--accent); color: var(--accent-ink); }
+#pickGo { width: 100%; padding: 16px; border-radius: 16px; font-size: 16px; margin-top: 16px; }
+#pickGo:disabled { opacity: .4; }
+
+/* ---------- Install hint / misc ---------- */
+.hint {
+  background: var(--amber-soft); color: var(--amber); border-radius: 14px;
+  font-size: 13px; padding: 12px 14px; margin-bottom: 14px; font-weight: 500; line-height: 1.45;
+}
+.empty { text-align: center; color: var(--ink-soft); font-size: 14px; padding: 26px 0; }
+.wkdays { display: flex; gap: 6px; margin-top: 4px; }
+.wkdays .chip { flex: 1; text-align: center; padding: 8px 0; }
+.settings-link { color: var(--ink-soft); font-size: 12.5px; text-align: center; margin-top: 22px; }
+.settings-link button { text-decoration: underline; color: inherit; }
+</style>
+</head>
+<body>
+
+<!-- ======= Section picker (first launch) ======= -->
+<div id="picker" hidden>
+  <div class="kicker">CS&amp;E · VII Semester · 2026–27</div>
+  <h1>Mark it.<br><em>Every class.</em></h1>
+  <p class="lede">Choose your section to load its timetable. Everything stays on this phone.</p>
+  <button class="pick-card" data-sec="A">
+    <span class="letter">A</span>
+    <span><span class="pt1">Section A</span><br><span class="pt2">Computer Science &amp; Engineering — VII A</span></span>
+  </button>
+  <button class="pick-card" data-sec="B">
+    <span class="letter">B</span>
+    <span><span class="pt1">Section B</span><br><span class="pt2">Computer Science &amp; Engineering — VII B · LH505</span></span>
+  </button>
+  <button id="pickGo" class="btn primary" disabled>Continue</button>
+</div>
+
+<!-- ======= App shell ======= -->
+<div id="app" hidden>
+  <header>
+    <div class="brand">att<em>e</em>nd</div>
+    <div class="section-chip" id="secChip"></div>
+  </header>
+
+  <main>
+    <!-- Dashboard -->
+    <section class="tab active" id="tab-dash">
+      <div id="installHint" class="hint" hidden>
+        📲 Install this app: tap <b>Share</b> in Safari, then <b>Add to Home Screen</b>.
+      </div>
+      <div class="card hero">
+        <div class="pct" id="heroPct">—</div>
+        <div class="sub" id="heroSub">No answered classes yet</div>
+      </div>
+      <div id="pendingWrap"></div>
+      <h2 class="sec">Today</h2>
+      <div class="card tight" id="todayList"></div>
+      <h2 class="sec">By subject</h2>
+      <div class="card tight" id="statsList"></div>
+    </section>
+
+    <!-- Timetable -->
+    <section class="tab" id="tab-tt">
+      <div class="chips" id="ttDays"></div>
+      <div class="card tight" id="ttList" style="margin-top:12px"></div>
+    </section>
+
+    <!-- Calendar -->
+    <section class="tab" id="tab-cal">
+      <div class="cal-head">
+        <button id="calPrev" aria-label="Previous month">‹</button>
+        <div class="m" id="calMonth"></div>
+        <button id="calNext" aria-label="Next month">›</button>
+      </div>
+      <div class="card"><div class="cal-grid" id="calGrid"></div>
+        <div class="legend">
+          <span><i style="background:var(--present-soft)"></i>Working</span>
+          <span><i style="background:var(--absent-soft)"></i>Holiday</span>
+        </div>
+      </div>
+      <h2 class="sec">Default working weekdays</h2>
+      <div class="card"><div class="wkdays" id="wkdays"></div></div>
+      <div class="settings-link">Tap any date to mark a holiday · <button id="resetBtn">Switch section / reset</button></div>
+    </section>
+
+    <!-- History -->
+    <section class="tab" id="tab-hist">
+      <div class="filters">
+        <select id="fSubject"><option value="">All subjects</option></select>
+        <select id="fStatus">
+          <option value="">All statuses</option>
+          <option>Present</option><option>Absent</option><option>Pending</option>
+        </select>
+      </div>
+      <div id="histList"></div>
+    </section>
+  </main>
+
+  <button class="fab" id="fabAdd" hidden aria-label="Add class">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <nav class="tabbar">
+    <button data-tab="dash" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      Dashboard</button>
+    <button data-tab="tt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Timetable</button>
+    <button data-tab="cal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+      Calendar</button>
+    <button data-tab="hist">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+      History</button>
+  </nav>
+</div>
+
+<!-- ======= Dialogs ======= -->
+<dialog id="dlgEntry">
+  <h3 id="dlgEntryTitle">Add class</h3>
+  <div class="field"><label>Subject</label><select id="eSubject"></select></div>
+  <div class="field"><label>Day</label><select id="eDay">
+    <option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option>
+    <option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="7">Sunday</option>
+  </select></div>
+  <div style="display:flex;gap:10px">
+    <div class="field" style="flex:1"><label>Start</label><input type="time" id="eStart" value="09:00"></div>
+    <div class="field" style="flex:1"><label>End</label><input type="time" id="eEnd" value="10:00"></div>
+  </div>
+  <div class="dlg-actions">
+    <button class="btn danger" id="eDelete" hidden>Delete</button>
+    <button class="btn ghost" data-close>Cancel</button>
+    <button class="btn primary" id="eSave">Save</button>
+  </div>
+</dialog>
+
+<dialog id="dlgDay">
+  <h3 id="dlgDayTitle"></h3>
+  <p id="dlgDayState" style="font-size:14px;color:var(--ink-soft);margin-bottom:12px"></p>
+  <div class="field"><label>Note (optional)</label><input type="text" id="dNote" placeholder="e.g. CIE Exams"></div>
+  <div class="dlg-actions">
+    <button class="btn ghost" id="dReset" hidden>Reset</button>
+    <button class="btn ghost" data-close>Cancel</button>
+    <button class="btn primary" id="dToggle"></button>
+  </div>
+</dialog>
+
+<dialog id="dlgStatus">
+  <h3>Update record</h3>
+  <p id="dlgStatusInfo" style="font-size:14px;color:var(--ink-soft);margin-bottom:14px"></p>
+  <div class="status-opts">
+    <button class="btn" style="background:var(--present-soft);color:var(--present)" data-status="Present">✓&nbsp; Present</button>
+    <button class="btn" style="background:var(--absent-soft);color:var(--absent)" data-status="Absent">✗&nbsp; Absent</button>
+    <button class="btn" style="background:var(--pending-soft);color:var(--pending)" data-status="Pending">⏳&nbsp; Pending</button>
+  </div>
+  <div class="dlg-actions"><button class="btn ghost" data-close>Cancel</button></div>
+</dialog>
+
+<dialog id="dlgReset">
+  <h3>Switch section?</h3>
+  <p style="font-size:14px;color:var(--ink-soft)">This clears the timetable and <b>all attendance records</b> on this phone, then shows the section picker again.</p>
+  <div class="dlg-actions">
+    <button class="btn ghost" data-close>Cancel</button>
+    <button class="btn danger" id="resetConfirm" style="flex:1">Erase &amp; switch</button>
+  </div>
+</dialog>
+
+<script>
+'use strict';
+/* ============================================================
+   Attend — local-first attendance tracker (CS&E VII, A & B)
+   All data lives in localStorage on this device.
+   ============================================================ */
+const LS_KEY = 'attend.v1';
+const SEM_START = '2026-07-20';
+
+const SUBJECTS = [
+  { key: 1, name: 'Internet of Things',               code: 'BCS701',      color: '#42A5F5' },
+  { key: 2, name: 'Parallel Computing',               code: 'BCS702',      color: '#FF7043' },
+  { key: 3, name: 'Cryptography & Network Security',  code: 'BCS703',      color: '#7E57C2' },
+  { key: 4, name: 'Big Data Analytics',               code: 'BCS714D',     color: '#66BB6A' },
+  { key: 5, name: 'Open Elective',                    code: 'Bxx755x',     color: '#EC407A' },
+  { key: 6, name: 'Major Project Phase-II',           code: 'BCS786',      color: '#78909C' },
+  { key: 7, name: 'Training & Placement / TAP',       code: 'TAP',         color: '#FFA726' },
+  { key: 8, name: 'Association Activity',             code: 'ASSOCIATION', color: '#26A69A' },
+  { key: 9, name: 'Student Mentoring',                code: 'MENTORING',   color: '#29B6F6' },
+];
+
+// [subjectKey, weekday(1=Mon), start, end]
+const TIMETABLE_A = [
+  [1,1,'08:55','09:50'],[2,1,'09:50','10:45'],[3,1,'11:05','12:00'],[5,1,'12:00','13:00'],
+  [4,2,'08:55','09:50'],[3,2,'09:50','10:45'],[2,2,'11:05','13:00'],
+  [3,3,'08:55','09:50'],[2,3,'09:50','10:45'],[1,3,'11:05','12:00'],[5,3,'12:00','13:00'],[6,3,'14:00','15:50'],
+  [7,4,'08:55','10:45'],[4,4,'11:05','12:00'],[3,4,'12:00','13:00'],[1,4,'14:00','15:50'],
+  [1,5,'08:55','09:50'],[4,5,'09:50','10:45'],[2,5,'11:05','12:00'],[5,5,'12:00','13:00'],
+  [9,6,'08:55','10:45'],[8,6,'11:05','13:00'],
+];
+const TIMETABLE_B = [
+  [3,1,'08:55','09:50'],[4,1,'09:50','10:45'],[1,1,'11:05','12:00'],[5,1,'12:00','13:00'],[1,1,'14:00','15:50'],
+  [7,2,'08:55','10:45'],[4,2,'11:05','12:00'],[3,2,'12:00','13:00'],
+  [1,3,'08:55','09:50'],[4,3,'09:50','10:45'],[2,3,'11:05','12:00'],[5,3,'12:00','13:00'],[6,3,'14:00','15:50'],
+  [3,4,'08:55','09:50'],[2,4,'09:50','10:45'],[2,4,'11:05','13:00'],
+  [2,5,'08:55','09:50'],[3,5,'09:50','10:45'],[1,5,'11:05','12:00'],[5,5,'12:00','13:00'],
+  [9,6,'08:55','10:45'],[8,6,'11:05','13:00'],
+];
+
+function academicCalendar() {
+  const days = {};
+  const set = (date, note) => { days[date] = { working: false, note }; };
+  set('2026-09-10','CIE 1 Exams'); set('2026-09-11','CIE 1 Exams'); set('2026-09-12','CIE 1 Exams');
+  set('2026-08-15','Independence Day');
+  set('2026-10-02','Gandhi Jayanti');
+  set('2026-10-31','Project EXPO');
+  set('2026-11-04','CIE 2 Exams'); set('2026-11-05','CIE 2 Exams'); set('2026-11-06','CIE 2 Exams');
+  let d = new Date(2026,10,10); const end = new Date(2026,11,31);
+  while (d <= end) {
+    const ds = fmt(d);
+    let note = 'Semester Break / Study Holidays';
+    if (ds >= '2026-11-14' && ds <= '2026-12-04') note = 'Theory Examinations';
+    else if (ds >= '2026-12-07' && ds <= '2026-12-18') note = 'Practical Examinations';
+    set(ds, note);
+    d.setDate(d.getDate()+1);
+  }
+  return days;
+}
+
+/* ---------- state ---------- */
+let S = null;
+function fmt(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function load() { try { S = JSON.parse(localStorage.getItem(LS_KEY)); } catch(e) { S = null; } }
+function save() { localStorage.setItem(LS_KEY, JSON.stringify(S)); }
+
+function seed(section) {
+  const src = section === 'B' ? TIMETABLE_B : TIMETABLE_A;
+  let id = 1;
+  S = {
+    section,
+    timetable: src.map(([k,w,s,e]) => ({ id: id++, subj: k, wd: w, start: s, end: e })),
+    calendar: academicCalendar(),          // date -> {working, note}
+    workdays: {1:true,2:true,3:true,4:true,5:true,6:false,7:false},
+    records: {},                            // "date|subj|start" -> {subj,date,time,status,at}
+    nextId: id,
+  };
+  save();
+}
+
+const subj = k => SUBJECTS.find(s => s.key === k);
+
+function isWorking(dateStr, weekday) {
+  const o = S.calendar[dateStr];
+  if (o) return o.working;
+  return !!S.workdays[weekday];
+}
+
+function generatePending() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = fmt(today);
+  const now = new Date();
+  let d = new Date(SEM_START + 'T00:00:00');
+  let changed = false;
+  while (d <= today) {
+    const ds = fmt(d);
+    const wd = ((d.getDay() + 6) % 7) + 1;   // 1=Mon..7=Sun
+    if (isWorking(ds, wd)) {
+      for (const t of S.timetable) {
+        if (t.wd !== wd) continue;
+        if (ds === todayStr) {
+          const [h,m] = t.start.split(':').map(Number);
+          const classTime = new Date(today); classTime.setHours(h, m);
+          if (now < classTime) continue;
+        }
+        const key = ds + '|' + t.subj + '|' + t.start;
+        if (!S.records[key]) {
+          S.records[key] = { subj: t.subj, date: ds, time: t.start, status: 'Pending' };
+          changed = true;
+        }
+      }
+    }
+    d.setDate(d.getDate()+1);
+  }
+  if (changed) save();
+}
+
+/* ---------- rendering ---------- */
+const $ = sel => document.querySelector(sel);
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+function renderAll() { renderDash(); renderTT(); renderCal(); renderHist(); }
+
+function recordList() { return Object.entries(S.records).map(([key,r]) => ({ key, ...r })); }
+
+function renderDash() {
+  const recs = recordList();
+  let present = 0, absent = 0;
+  const per = {};
+  for (const r of recs) {
+    per[r.subj] ??= { p:0, a:0, pd:0 };
+    if (r.status === 'Present') { present++; per[r.subj].p++; }
+    else if (r.status === 'Absent') { absent++; per[r.subj].a++; }
+    else per[r.subj].pd++;
+  }
+  const answered = present + absent;
+  const pct = answered ? present*100/answered : null;
+  const heroPct = $('#heroPct');
+  heroPct.textContent = pct === null ? '—' : pct.toFixed(1) + '%';
+  heroPct.classList.toggle('low', pct !== null && pct < 75);
+  $('#heroSub').textContent = pct === null ? 'No answered classes yet'
+    : `${present} present · ${absent} absent · overall attendance`;
+
+  // pending prompts
+  const pend = recs.filter(r => r.status === 'Pending')
+    .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)).slice(0, 12);
+  $('#pendingWrap').innerHTML = !pend.length ? '' :
+    `<h2 class="sec">Pending — did you attend?</h2><div class="card tight">` +
+    pend.map(r => {
+      const s = subj(r.subj);
+      return `<div class="row">
+        <span class="dot" style="background:${s.color}"></span>
+        <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${r.date} · ${r.time}</span></span>
+        <span class="yn">
+          <button class="yes" data-key="${r.key}" data-set="Present" aria-label="Present">✓</button>
+          <button class="no"  data-key="${r.key}" data-set="Absent" aria-label="Absent">✗</button>
+        </span></div>`;
+    }).join('') + '</div>';
+
+  // today
+  const now = new Date();
+  const wd = ((now.getDay()+6)%7)+1;
+  const todayStr = fmt(now);
+  const working = isWorking(todayStr, wd);
+  const todays = working ? S.timetable.filter(t => t.wd === wd).sort((a,b)=>a.start.localeCompare(b.start)) : [];
+  $('#todayList').innerHTML = !working
+    ? `<div class="empty">🏖️ Holiday — no classes today</div>`
+    : !todays.length ? `<div class="empty">No classes scheduled today</div>`
+    : todays.map(t => {
+        const s = subj(t.subj);
+        const r = S.records[todayStr + '|' + t.subj + '|' + t.start];
+        return `<div class="row">
+          <span class="dot" style="background:${s.color}"></span>
+          <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${t.start} – ${t.end}</span></span>
+          ${r ? `<span class="badge ${r.status}">${r.status}</span>` : '<span class="t2">—</span>'}</div>`;
+      }).join('');
+
+  // per subject
+  const keys = Object.keys(per).map(Number);
+  $('#statsList').innerHTML = !keys.length ? `<div class="empty">Stats appear once classes are recorded</div>`
+    : keys.map(k => {
+        const s = subj(k), v = per[k];
+        const ans = v.p + v.a;
+        const p = ans ? v.p*100/ans : null;
+        return `<div class="row">
+          <span class="dot" style="background:${s.color}"></span>
+          <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${v.p} present · ${v.a} absent · ${v.pd} pending</span></span>
+          <span class="pctcell ${p===null?'':(p<75?'low':'ok')}">${p===null?'—':Math.round(p)+'%'}</span></div>`;
+      }).join('');
+}
+
+let ttDay = Math.min(((new Date().getDay()+6)%7)+1, 6);
+function renderTT() {
+  const names = ['Mon','Tue','Wed','Thu','Fri','Sat'];
+  $('#ttDays').innerHTML = names.map((n,i) =>
+    `<button class="chip ${ttDay===i+1?'on':''}" data-day="${i+1}">${n}</button>`).join('');
+  const list = S.timetable.filter(t => t.wd === ttDay).sort((a,b)=>a.start.localeCompare(b.start));
+  $('#ttList').innerHTML = !list.length ? `<div class="empty">No classes on this day</div>`
+    : list.map(t => {
+        const s = subj(t.subj);
+        return `<div class="row" data-entry="${t.id}" style="cursor:pointer">
+          <span class="dot" style="background:${s.color}"></span>
+          <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${s.code} · ${t.start} – ${t.end}</span></span>
+          <span class="t2">✎</span></div>`;
+      }).join('');
+}
+
+let calMonth = new Date(new Date().getFullYear(), new Date().getMonth());
+function renderCal() {
+  $('#calMonth').textContent = calMonth.toLocaleDateString('en', { month:'long', year:'numeric' });
+  const first = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1);
+  const dim = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 0).getDate();
+  const lead = (first.getDay()+6)%7;
+  const todayStr = fmt(new Date());
+  let html = ['M','T','W','T','F','S','S'].map(w => `<span class="wd">${w}</span>`).join('');
+  for (let i=0;i<lead;i++) html += '<span></span>';
+  for (let d=1; d<=dim; d++) {
+    const dt = new Date(calMonth.getFullYear(), calMonth.getMonth(), d);
+    const ds = fmt(dt);
+    const wd = ((dt.getDay()+6)%7)+1;
+    const w = isWorking(ds, wd);
+    const note = S.calendar[ds]?.note;
+    html += `<button class="day ${w?'':'off'} ${ds===todayStr?'today':''}" data-date="${ds}">${d}${note?'<span class="note-dot"></span>':''}</button>`;
+  }
+  $('#calGrid').innerHTML = html;
+
+  const wn = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  $('#wkdays').innerHTML = wn.map((n,i) =>
+    `<button class="chip ${S.workdays[i+1]?'on':''}" data-wd="${i+1}">${n}</button>`).join('');
+}
+
+function renderHist() {
+  const fs = $('#fSubject');
+  if (fs.options.length === 1) {
+    for (const s of SUBJECTS) fs.insertAdjacentHTML('beforeend', `<option value="${s.key}">${esc(s.name)}</option>`);
+  }
+  const sub = fs.value ? Number(fs.value) : null;
+  const st = $('#fStatus').value || null;
+  const recs = recordList()
+    .filter(r => (!sub || r.subj === sub) && (!st || r.status === st))
+    .sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
+  let html = '', lastDate = '';
+  for (const r of recs) {
+    if (r.date !== lastDate) { html += `<div class="datehead">${r.date}</div><div class="card tight">`; }
+    const s = subj(r.subj);
+    html += `<div class="row" data-rec="${r.key}" style="cursor:pointer">
+      <span class="dot" style="background:${s.color}"></span>
+      <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${r.time}</span></span>
+      <span class="badge ${r.status}">${r.status}</span></div>`;
+    const next = recs[recs.indexOf(r)+1];
+    if (!next || next.date !== r.date) html += '</div>';
+    lastDate = r.date;
+  }
+  $('#histList').innerHTML = html || '<div class="empty">No records match</div>';
+}
+
+/* ---------- interactions ---------- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('button, .row[data-rec], .row[data-entry]');
+  if (!t) return;
+
+  if (t.dataset.tab) {                       // bottom tabs
+    document.querySelectorAll('nav.tabbar button').forEach(b => b.classList.toggle('active', b === t));
+    document.querySelectorAll('.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-'+t.dataset.tab));
+    $('#fabAdd').hidden = t.dataset.tab !== 'tt';
+    window.scrollTo(0,0);
+    return;
+  }
+  if (t.dataset.sec) {                       // picker card
+    pickSec = t.dataset.sec;
+    document.querySelectorAll('.pick-card').forEach(c => c.classList.toggle('sel', c === t));
+    $('#pickGo').disabled = false;
+    return;
+  }
+  if (t.id === 'pickGo' && pickSec) {
+    seed(pickSec); generatePending();
+    $('#picker').hidden = true; $('#app').hidden = false;
+    $('#secChip').textContent = "CS '"+S.section+"'";
+    renderAll();
+    return;
+  }
+  if (t.dataset.key && t.dataset.set) {      // pending yes/no
+    const r = S.records[t.dataset.key];
+    if (r) { r.status = t.dataset.set; r.at = Date.now(); save(); renderDash(); renderHist(); }
+    return;
+  }
+  if (t.dataset.day) { ttDay = Number(t.dataset.day); renderTT(); return; }
+  if (t.dataset.wd) {                        // weekday default toggle
+    const k = Number(t.dataset.wd);
+    S.workdays[k] = !S.workdays[k];
+    save(); generatePending(); renderCal(); renderDash();
+    return;
+  }
+  if (t.id === 'calPrev' || t.id === 'calNext') {
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + (t.id==='calNext'?1:-1));
+    renderCal(); return;
+  }
+  if (t.dataset.date) { openDayDialog(t.dataset.date); return; }
+  if (t.closest('#ttList') && t.dataset.entry) { openEntryDialog(Number(t.dataset.entry)); return; }
+  if (t.id === 'fabAdd') { openEntryDialog(null); return; }
+  if (t.dataset.rec) { openStatusDialog(t.dataset.rec); return; }
+  if (t.id === 'resetBtn') { $('#dlgReset').showModal(); return; }
+  if (t.id === 'resetConfirm') {
+    localStorage.removeItem(LS_KEY);
+    location.reload(); return;
+  }
+  if (t.dataset.close !== undefined) { t.closest('dialog').close(); return; }
+});
+$('#fSubject').addEventListener('change', renderHist);
+$('#fStatus').addEventListener('change', renderHist);
+
+/* ---------- dialogs ---------- */
+let pickSec = null, editingEntry = null, editingDay = null, editingRec = null;
+
+function openEntryDialog(id) {
+  editingEntry = id;
+  const eSub = $('#eSubject');
+  if (!eSub.options.length)
+    for (const s of SUBJECTS) eSub.insertAdjacentHTML('beforeend', `<option value="${s.key}">${esc(s.name)}</option>`);
+  const t = id ? S.timetable.find(x => x.id === id) : null;
+  $('#dlgEntryTitle').textContent = t ? 'Edit class' : 'Add class';
+  $('#eDelete').hidden = !t;
+  eSub.value = t ? t.subj : SUBJECTS[0].key;
+  $('#eDay').value = t ? t.wd : ttDay;
+  $('#eStart').value = t ? t.start : '09:00';
+  $('#eEnd').value = t ? t.end : '10:00';
+  $('#dlgEntry').showModal();
+}
+$('#eSave').addEventListener('click', () => {
+  const data = {
+    subj: Number($('#eSubject').value), wd: Number($('#eDay').value),
+    start: $('#eStart').value || '09:00', end: $('#eEnd').value || '10:00',
+  };
+  if (editingEntry) Object.assign(S.timetable.find(x => x.id === editingEntry), data);
+  else S.timetable.push({ id: S.nextId++, ...data });
+  save(); generatePending();
+  $('#dlgEntry').close(); renderTT(); renderDash();
+});
+$('#eDelete').addEventListener('click', () => {
+  S.timetable = S.timetable.filter(x => x.id !== editingEntry);
+  save(); $('#dlgEntry').close(); renderTT(); renderDash();
+});
+
+function openDayDialog(ds) {
+  editingDay = ds;
+  const dt = new Date(ds + 'T00:00:00');
+  const wd = ((dt.getDay()+6)%7)+1;
+  const w = isWorking(ds, wd);
+  const o = S.calendar[ds];
+  $('#dlgDayTitle').textContent = dt.toLocaleDateString('en', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  $('#dlgDayState').textContent = (w ? 'Currently a working day' : 'Currently a holiday') + (o?.note ? ` — ${o.note}` : '');
+  $('#dNote').value = o?.note || '';
+  $('#dReset').hidden = !o;
+  $('#dToggle').textContent = w ? 'Mark holiday' : 'Mark working';
+  $('#dToggle').dataset.to = w ? 'holiday' : 'working';
+  $('#dlgDay').showModal();
+}
+$('#dToggle').addEventListener('click', e => {
+  const note = $('#dNote').value.trim();
+  S.calendar[editingDay] = { working: e.target.dataset.to === 'working', note: note || undefined };
+  save(); generatePending();
+  $('#dlgDay').close(); renderCal(); renderDash();
+});
+$('#dReset').addEventListener('click', () => {
+  delete S.calendar[editingDay];
+  save(); $('#dlgDay').close(); renderCal(); renderDash();
+});
+
+function openStatusDialog(key) {
+  editingRec = key;
+  const r = S.records[key]; const s = subj(r.subj);
+  $('#dlgStatusInfo').textContent = `${s.name} · ${r.date} · ${r.time} · currently ${r.status}`;
+  $('#dlgStatus').showModal();
+}
+document.querySelectorAll('#dlgStatus [data-status]').forEach(b => b.addEventListener('click', () => {
+  const r = S.records[editingRec];
+  if (r) { r.status = b.dataset.status; r.at = Date.now(); save(); }
+  $('#dlgStatus').close(); renderHist(); renderDash();
+}));
+
+/* ---------- boot ---------- */
+load();
+if (!S || !S.section) {
+  $('#picker').hidden = false;
+} else {
+  generatePending();
+  $('#app').hidden = false;
+  $('#secChip').textContent = "CS '"+S.section+"'";
+  renderAll();
+}
+// iOS install hint (only in Safari browser tab, not when already installed)
+const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+if (isIOS && !standalone) $('#installHint').hidden = false;
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
