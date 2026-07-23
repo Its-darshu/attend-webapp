@@ -10,51 +10,55 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Attend">
-<meta name="theme-color" content="#FAF9FD" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111318" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#211B16" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
-/* Material 3 palette matching the Android APK (seed #1565C0) */
+/* "Terracotta & Cream" palette — copied from the Android APK theme (Color.kt) */
 :root {
-  --bg: #FAF9FD;
-  --bg-soft: #EFF1F8;
-  --card: #FFFFFF;
-  --ink: #1A1C1E;
-  --ink-soft: #44474E;
-  --line: #E1E2E8;
-  --accent: #1565C0;
+  --bg: #FFFFFF;             /* CreamBackground (white page) */
+  --bg-soft: #F3F1EE;        /* SandSurfaceVariant */
+  --card: #FFFFFF;           /* OatSurface */
+  --ink: #23201D;            /* Espresso */
+  --ink-soft: #6E6862;       /* WarmTaupe */
+  --line: #DAD6D0;           /* CreamOutline */
+  --accent: #BE6B47;         /* Terracotta */
   --accent-ink: #FFFFFF;
-  --amber: #8A5100;
-  --amber-soft: #FFEBD1;
-  --present: #2E7D32;
-  --present-soft: #DFF0DF;
-  --absent: #C62828;
-  --absent-soft: #F9DEDC;
-  --pending: #8A5100;
-  --pending-soft: #F6E6CC;
-  --radius: 16px;
-  --shadow: 0 1px 2px rgba(26,28,30,.08), 0 4px 12px rgba(26,28,30,.05);
+  --accent-container: #F3DCCB;      /* TerracottaContainer */
+  --on-accent-container: #5A2E1A;   /* OnTerracottaContainer */
+  --amber: #5C3F13;          /* onNoClassContainer */
+  --amber-soft: #F5E6CB;     /* noClassContainer (warm honey) */
+  --present: #33471F;        /* onPresentContainer */
+  --present-soft: #E4ECD9;   /* presentContainer (warm herb green) */
+  --absent: #5E241A;         /* onAbsentContainer */
+  --absent-soft: #F4DED6;    /* absentContainer (brick) */
+  --pending: #6E6862;        /* pending taupe */
+  --pending-soft: #EBE1D2;   /* pendingContainer */
+  --radius: 18px;            /* CozyShapes.medium */
+  --shadow: 0 1px 2px rgba(35,32,29,.08), 0 4px 14px rgba(35,32,29,.06);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111318;
-    --bg-soft: #1B1E24;
-    --card: #1B1E24;
-    --ink: #E2E2E9;
-    --ink-soft: #A9ACB4;
-    --line: #2B2F36;
-    --accent: #90CAF9;
-    --accent-ink: #0B3055;
-    --amber: #F0BD73;
-    --amber-soft: #3A2E19;
-    --present: #81C784;
-    --present-soft: #1C3220;
-    --absent: #EF9A9A;
-    --absent-soft: #3B2222;
-    --pending: #F0BD73;
-    --pending-soft: #3A2E19;
-    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 12px rgba(0,0,0,.28);
+    --bg: #211B16;           /* EspressoBackground */
+    --bg-soft: #3B322A;      /* EspressoSurfaceVariant */
+    --card: #2A231D;         /* EspressoSurface */
+    --ink: #EDE3D7;          /* WarmCreamText */
+    --ink-soft: #CABAA6;     /* WarmStone */
+    --line: #6C5D4E;         /* EspressoOutline */
+    --accent: #E3A585;       /* TerracottaLight */
+    --accent-ink: #211B16;
+    --accent-container: #5A3826;      /* TerracottaContainerDark */
+    --on-accent-container: #F6DCCB;
+    --amber: #F6E4C6;
+    --amber-soft: #4E3917;
+    --present: #DCE8C6;
+    --present-soft: #33421F;
+    --absent: #F7DDD5;
+    --absent-soft: #52281F;
+    --pending: #CABAA6;
+    --pending-soft: #3B322A;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.3);
   }
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -104,8 +108,14 @@ nav.tabbar button {
   font-size: 11px; font-weight: 500; color: var(--ink-soft);
   padding: 6px 0 4px; border-radius: 14px; transition: color .18s;
 }
-nav.tabbar button svg { width: 24px; height: 24px; stroke-width: 1.7; }
+/* M3 NavigationBar-style pill indicator (primaryContainer), like the APK */
+nav.tabbar button svg {
+  width: 24px; height: 24px; stroke-width: 1.7;
+  padding: 3px 14px; border-radius: 999px; box-sizing: content-box;
+  transition: background .18s;
+}
 nav.tabbar button.active { color: var(--accent); font-weight: 700; }
+nav.tabbar button.active svg { background: var(--accent-container); color: var(--on-accent-container); }
 
 /* ---------- Layout ---------- */
 main { padding: 18px 18px 30px; max-width: 560px; margin: 0 auto; }
@@ -177,22 +187,31 @@ h2.sec:first-child { margin-top: 4px; }
 }
 .chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 
-/* ---------- Calendar ---------- */
-.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.cal-head .m {  font-weight: 800; font-size: 19px; }
-.cal-head button { width: 38px; height: 38px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-.cal-grid .wd { text-align: center; font-size: 11px; color: var(--ink-soft); font-weight: 600; padding: 4px 0; }
-.cal-grid .day {
-  aspect-ratio: 1; border-radius: 12px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; font-size: 13.5px; font-weight: 600;
-  background: var(--present-soft); color: var(--ink); position: relative; border: none;
+/* ---------- Calendar (APK-style: date list, Jul 20 → Nov 9) ---------- */
+.cal-title { font-size: 26px; font-weight: 800; color: var(--accent); margin: 4px 2px 14px; }
+.wkday-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; font-size: 12px; color: var(--ink); }
+.wkday-col input { width: 20px; height: 20px; accent-color: var(--accent); }
+.day-card {
+  width: 100%; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--card); border: 2px solid transparent; border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 10px;
 }
-.cal-grid .day.off { background: var(--absent-soft); }
-.cal-grid .day.today { outline: 2px solid var(--accent); outline-offset: -2px; }
-.cal-grid .day .note-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-soft); position: absolute; bottom: 6px; }
-.legend { display: flex; gap: 16px; margin-top: 12px; font-size: 12.5px; color: var(--ink-soft); }
-.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 5px; vertical-align: -1px; }
+.day-card.off { background: color-mix(in srgb, var(--absent-soft) 55%, var(--card)); }
+.day-card.override { border-color: var(--accent); }
+.day-card .dc1 { font-weight: 700; font-size: 15.5px; }
+.day-card .dc2 { font-size: 13px; color: var(--ink-soft); margin-top: 1px; }
+.day-card .dc-note { font-size: 12px; font-weight: 600; margin-top: 2px; }
+.day-card .dc-note.working { color: var(--accent); }
+.day-card .dc-note.holiday { color: var(--absent); }
+.tagchip {
+  display: inline-block; font-size: 10.5px; font-weight: 700; margin-left: 8px; padding: 2px 6px;
+  border-radius: 6px; background: var(--accent-container); color: var(--accent); vertical-align: 1px;
+}
+.day-pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 8px; flex: none; }
+.day-pill.working { background: var(--present-soft); color: var(--present); }
+.day-pill.holiday { background: var(--absent-soft); color: var(--absent); }
+.switch-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.switch-row input { width: 22px; height: 22px; accent-color: var(--accent); }
 
 /* ---------- Filters / selects ---------- */
 .filters { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -328,22 +347,20 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
       <div class="card tight" id="ttList" style="margin-top:12px"></div>
     </section>
 
-    <!-- Calendar -->
+    <!-- Calendar — mirrors the APK's CalendarTab: weekday checkboxes + date-exception list -->
     <section class="tab" id="tab-cal">
-      <div class="cal-head">
-        <button id="calPrev" aria-label="Previous month">‹</button>
-        <div class="m" id="calMonth"></div>
-        <button id="calNext" aria-label="Next month">›</button>
+      <div class="cal-title">Academic Calendar</div>
+      <div class="card">
+        <div style="font-weight:700;font-size:15.5px">Default Weekly Working Days</div>
+        <div style="font-size:12.5px;color:var(--ink-soft);margin:2px 0 12px">Classes schedule reminders on these checked weekdays by default.</div>
+        <div style="display:flex" id="wkdays"></div>
       </div>
-      <div class="card"><div class="cal-grid" id="calGrid"></div>
-        <div class="legend">
-          <span><i style="background:var(--present-soft)"></i>Working</span>
-          <span><i style="background:var(--absent-soft)"></i>Holiday</span>
-        </div>
+      <div style="margin:18px 2px 8px">
+        <div style="font-weight:700;font-size:15.5px">Calendar Day Exceptions</div>
+        <div style="font-size:12.5px;color:var(--ink-soft)">Tap any date below to mark it as a Holiday or custom working day.</div>
       </div>
-      <h2 class="sec">Default working weekdays</h2>
-      <div class="card"><div class="wkdays" id="wkdays"></div></div>
-      <div class="settings-link">Tap any date to mark a holiday · <button id="resetBtn">Switch section / reset</button></div>
+      <div id="calList"></div>
+      <div class="settings-link">Chose the wrong section? <button id="resetBtn">Switch section / reset</button></div>
     </section>
 
     <!-- History -->
@@ -363,19 +380,20 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
   </button>
 
+  <!-- Tab order matches the APK: Dashboard, History, Timetable, Calendar -->
   <nav class="tabbar">
     <button data-tab="dash" class="active">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
       Dashboard</button>
+    <button data-tab="hist">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+      History</button>
     <button data-tab="tt">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
       Timetable</button>
     <button data-tab="cal">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
       Calendar</button>
-    <button data-tab="hist">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
-      History</button>
   </nav>
 </div>
 
@@ -399,13 +417,17 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
 </dialog>
 
 <dialog id="dlgDay">
-  <h3 id="dlgDayTitle"></h3>
-  <p id="dlgDayState" style="font-size:14px;color:var(--ink-soft);margin-bottom:12px"></p>
-  <div class="field"><label>Note (optional)</label><input type="text" id="dNote" placeholder="e.g. CIE Exams"></div>
+  <h3>Edit Day Exception</h3>
+  <p id="dlgDayTitle" style="font-weight:600;font-size:14px;margin-bottom:14px"></p>
+  <div class="switch-row">
+    <input type="checkbox" id="dSwitch">
+    <label for="dSwitch" id="dSwitchLabel">Mark as Working Day</label>
+  </div>
+  <div class="field"><label>Holiday Reason / Note (Optional)</label><input type="text" id="dNote" placeholder="e.g. Semester Break, Sick Leave"></div>
   <div class="dlg-actions">
-    <button class="btn ghost" id="dReset" hidden>Reset</button>
+    <button class="btn ghost" id="dReset" style="color:var(--absent)">Reset to Default</button>
     <button class="btn ghost" data-close>Cancel</button>
-    <button class="btn primary" id="dToggle"></button>
+    <button class="btn primary" id="dSave">Save</button>
   </div>
 </dialog>
 
@@ -637,28 +659,35 @@ function renderTT() {
       }).join('');
 }
 
-let calMonth = new Date(new Date().getFullYear(), new Date().getMonth());
+/* APK-style calendar: semester date list (Jul 20 → Nov 9, 2026) with per-day exception cards. */
 function renderCal() {
-  $('#calMonth').textContent = calMonth.toLocaleDateString('en', { month:'long', year:'numeric' });
-  const first = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1);
-  const dim = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 0).getDate();
-  const lead = (first.getDay()+6)%7;
-  const todayStr = fmt(new Date());
-  let html = ['M','T','W','T','F','S','S'].map(w => `<span class="wd">${w}</span>`).join('');
-  for (let i=0;i<lead;i++) html += '<span></span>';
-  for (let d=1; d<=dim; d++) {
-    const dt = new Date(calMonth.getFullYear(), calMonth.getMonth(), d);
-    const ds = fmt(dt);
-    const wd = ((dt.getDay()+6)%7)+1;
-    const w = isWorking(ds, wd);
-    const note = S.calendar[ds]?.note;
-    html += `<button class="day ${w?'':'off'} ${ds===todayStr?'today':''}" data-date="${ds}">${d}${note?'<span class="note-dot"></span>':''}</button>`;
-  }
-  $('#calGrid').innerHTML = html;
-
   const wn = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   $('#wkdays').innerHTML = wn.map((n,i) =>
-    `<button class="chip ${S.workdays[i+1]?'on':''}" data-wd="${i+1}">${n}</button>`).join('');
+    `<label class="wkday-col">${n}<input type="checkbox" data-wd="${i+1}" ${S.workdays[i+1]?'checked':''}></label>`).join('');
+
+  const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let html = '';
+  let d = new Date(2026, 6, 20);           // semester start
+  const end = new Date(2026, 10, 9);       // last working day
+  while (d <= end) {
+    const ds = fmt(d);
+    const wd = ((d.getDay()+6)%7)+1;
+    const o = S.calendar[ds];
+    const working = o ? o.working : !!S.workdays[wd];
+    const note = o?.note;
+    html += `<button class="day-card ${working?'':'off'} ${o?'override':''}" data-date="${ds}">
+      <span style="flex:1;min-width:0">
+        <span class="dc1">${dayNames[wd-1]}${o?'<span class="tagchip">Customized</span>':''}</span><br>
+        <span class="dc2">${months[d.getMonth()]} ${String(d.getDate()).padStart(2,'0')}, ${d.getFullYear()}</span>
+        ${note ? `<br><span class="dc-note ${working?'working':'holiday'}">Note: ${esc(note)}</span>` : ''}
+      </span>
+      <span class="day-pill ${working?'working':'holiday'}">${working?'Working Day':'Holiday'}</span>
+      <span style="color:var(--ink-soft);opacity:.6">✎</span>
+    </button>`;
+    d.setDate(d.getDate()+1);
+  }
+  $('#calList').innerHTML = html;
 }
 
 function renderHist() {
@@ -717,16 +746,6 @@ document.addEventListener('click', e => {
     return;
   }
   if (t.dataset.day) { ttDay = Number(t.dataset.day); renderTT(); return; }
-  if (t.dataset.wd) {                        // weekday default toggle
-    const k = Number(t.dataset.wd);
-    S.workdays[k] = !S.workdays[k];
-    save(); generatePending(); renderCal(); renderDash();
-    return;
-  }
-  if (t.id === 'calPrev' || t.id === 'calNext') {
-    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + (t.id==='calNext'?1:-1));
-    renderCal(); return;
-  }
   if (t.dataset.date) { openDayDialog(t.dataset.date); return; }
   if (t.closest('#ttList') && t.dataset.entry) { openEntryDialog(Number(t.dataset.entry)); return; }
   if (t.id === 'fabAdd') { openEntryDialog(null); return; }
@@ -740,6 +759,14 @@ document.addEventListener('click', e => {
 });
 $('#fSubject').addEventListener('change', renderHist);
 $('#fStatus').addEventListener('change', renderHist);
+
+// Default working-weekday checkboxes (Calendar tab)
+document.addEventListener('change', e => {
+  const wd = e.target.dataset && e.target.dataset.wd;
+  if (!wd) return;
+  S.workdays[Number(wd)] = e.target.checked;
+  save(); generatePending(); renderCal(); renderDash();
+});
 
 /* ---------- dialogs ---------- */
 let pickSec = null, editingEntry = null, editingDay = null, editingRec = null;
@@ -777,25 +804,27 @@ function openDayDialog(ds) {
   editingDay = ds;
   const dt = new Date(ds + 'T00:00:00');
   const wd = ((dt.getDay()+6)%7)+1;
-  const w = isWorking(ds, wd);
   const o = S.calendar[ds];
-  $('#dlgDayTitle').textContent = dt.toLocaleDateString('en', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
-  $('#dlgDayState').textContent = (w ? 'Currently a working day' : 'Currently a holiday') + (o?.note ? ` — ${o.note}` : '');
+  $('#dlgDayTitle').textContent = 'Configure details for ' +
+    dt.toLocaleDateString('en', { weekday:'long', month:'short', day:'2-digit', year:'numeric' });
+  $('#dSwitch').checked = o ? o.working : !!S.workdays[wd];
+  $('#dSwitchLabel').textContent = $('#dSwitch').checked ? 'Mark as Working Day' : 'Mark as Holiday / Non-Working';
   $('#dNote').value = o?.note || '';
-  $('#dReset').hidden = !o;
-  $('#dToggle').textContent = w ? 'Mark holiday' : 'Mark working';
-  $('#dToggle').dataset.to = w ? 'holiday' : 'working';
   $('#dlgDay').showModal();
 }
-$('#dToggle').addEventListener('click', e => {
+$('#dSwitch').addEventListener('change', () => {
+  $('#dSwitchLabel').textContent = $('#dSwitch').checked ? 'Mark as Working Day' : 'Mark as Holiday / Non-Working';
+});
+$('#dSave').addEventListener('click', () => {
   const note = $('#dNote').value.trim();
-  S.calendar[editingDay] = { working: e.target.dataset.to === 'working', note: note || undefined };
+  S.calendar[editingDay] = { working: $('#dSwitch').checked, note: note || undefined };
   save(); generatePending();
   $('#dlgDay').close(); renderCal(); renderDash();
 });
 $('#dReset').addEventListener('click', () => {
   delete S.calendar[editingDay];
-  save(); $('#dlgDay').close(); renderCal(); renderDash();
+  save(); generatePending();
+  $('#dlgDay').close(); renderCal(); renderDash();
 });
 
 function openStatusDialog(key) {
