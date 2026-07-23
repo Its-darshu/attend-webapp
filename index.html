@@ -202,6 +202,32 @@ span.t2 { display: inline-block; }
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 10px;
 }
+.sec-row { display: flex; align-items: baseline; justify-content: space-between; }
+.linkbtn { font-size: 13px; font-weight: 600; color: var(--accent); }
+
+/* "Today's Classes Done!" card (APK) */
+.done-card {
+  background: var(--present-soft); border-radius: var(--radius);
+  padding: 36px 24px; text-align: center; margin-bottom: 12px;
+}
+.done-card .circle {
+  width: 92px; height: 92px; border-radius: 50%; margin: 0 auto 18px;
+  background: color-mix(in srgb, var(--present) 35%, var(--present-soft));
+  display: grid; place-items: center; color: #FFFFFF;
+}
+.done-card .circle svg { width: 40px; height: 40px; }
+.done-card .dt { font-size: 17px; font-weight: 800; color: var(--present); margin-bottom: 8px; }
+.done-card .ds { font-size: 14px; color: color-mix(in srgb, var(--present) 82%, transparent); }
+
+/* History summary card (APK) */
+.summary-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.summary-card .sl .h { font-weight: 800; font-size: 16.5px; margin-bottom: 4px; }
+.summary-card .sl .tot { font-size: 14.5px; margin-bottom: 2px; }
+.summary-card .sl .brk { font-size: 12.5px; color: var(--ink-soft); }
+.summary-card .sr { text-align: right; flex: none; }
+.summary-card .sr .p { font-size: 30px; font-weight: 800; color: var(--present); line-height: 1.1; }
+.summary-card .sr .p.low { color: var(--absent); }
+.summary-card .sr .l { font-size: 12.5px; color: var(--ink-soft); }
 
 /* ---------- Swipe-to-mark (ported from the APK's DashboardTab drag gesture) ---------- */
 .swipe-wrap { position: relative; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
@@ -377,7 +403,11 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
         <div style="font-weight:700;font-size:15.5px;margin-bottom:12px">Today's Attendance Status</div>
         <div class="statgrid" id="statGrid"></div>
       </div>
-      <h2 class="sec">Today's Schedule</h2>
+      <div id="pendingOldWrap"></div>
+      <div class="sec-row">
+        <h2 class="sec">Today's Schedule</h2>
+        <button id="toggleTodayList" class="linkbtn" hidden>View/Alter Today's List</button>
+      </div>
       <div class="swipe-hint">Swipe a pending card: ← attended · → absent · ↓ class not taken</div>
       <div id="todayList"></div>
     </section>
@@ -404,15 +434,22 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
       <div class="settings-link">Chose the wrong section? <button id="resetBtn">Switch section / reset</button></div>
     </section>
 
-    <!-- History (also hosts overall % + by-subject stats, moved from Dashboard) -->
+    <!-- History — mirrors the APK: Attendance History title, Summary card, 3 filters, record cards -->
     <section class="tab" id="tab-hist">
+      <div class="cal-title">Attendance History</div>
       <div id="histStats"></div>
       <div class="filters">
-        <select id="fSubject"><option value="">All subjects</option></select>
+        <select id="fSubject"><option value="">All Subjects</option></select>
         <select id="fStatus">
-          <option value="">All statuses</option>
+          <option value="">All Statuses</option>
           <option>Present</option><option>Absent</option><option>Pending</option>
           <option value="Cancelled">No Class</option>
+        </select>
+        <select id="fTime">
+          <option value="">All Time</option>
+          <option value="today">Today</option>
+          <option value="7d">Last 7 Days</option>
+          <option value="month">This Month</option>
         </select>
       </div>
       <div id="histList"></div>
@@ -630,8 +667,29 @@ const ICONS = {
   block: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M6.2 6.2l11.6 11.6"/></svg>',
 };
 
+let showTodayFull = false;
+
+function pendingCardHTML(r) {
+  const s = subj(r.subj);
+  const dateNice = new Date(r.date + 'T00:00:00').toLocaleDateString('en', { month:'short', day:'2-digit', year:'numeric' });
+  return `<div class="swipe-wrap">
+    <div class="swipe-bg"></div>
+    <div class="swipe-card" data-key="${r.key}">
+      <div class="row">
+        <span class="dot" style="background:${s.color}"></span>
+        <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${dateNice} • ${r.time}</span></span>
+        <span class="yn">
+          <button class="yes" data-key="${r.key}" data-set="Present" aria-label="Present">${ICONS.check}</button>
+          <button class="no"  data-key="${r.key}" data-set="Absent" aria-label="Absent">${ICONS.cross}</button>
+          <button class="nc"  data-key="${r.key}" data-set="Cancelled" aria-label="No Class">${ICONS.block}</button>
+        </span>
+      </div>
+    </div>
+  </div>`;
+}
+
 /* Dashboard, mirroring the APK: date header, Today's Attendance Status counters,
-   Today's Schedule cards (pending = swipeable with round buttons; answered = badge + reset). */
+   pending backlog from earlier days, Today's Schedule with "Classes Done" state. */
 function renderDash() {
   const now = new Date();
   const todayStr = fmt(now);
@@ -654,47 +712,72 @@ function renderDash() {
      <div class="si noclass"><div class="n">${c}</div><div class="l">No Class</div></div>
      <div class="si pending"><div class="n">${pd}</div><div class="l">Pending</div></div>`;
 
+  // Pending from earlier days — markable right here (buttons + swipe)
+  const oldPend = recordList()
+    .filter(r => r.status === 'Pending' && r.date < todayStr)
+    .sort((x,y) => (x.date+x.time).localeCompare(y.date+y.time))
+    .slice(0, 15);
+  $('#pendingOldWrap').innerHTML = !oldPend.length ? '' :
+    `<h2 class="sec">Pending — earlier days</h2>` + oldPend.map(pendingCardHTML).join('');
+
   // Today's Schedule
   const working = isWorking(todayStr, wd);
   const todays = working ? S.timetable.filter(t => t.wd === wd).sort((x,y) => x.start.localeCompare(y.start)) : [];
-  $('#todayList').innerHTML = !working
-    ? `<div class="card"><div class="empty">Holiday — no classes today</div></div>`
-    : !todays.length ? `<div class="card"><div class="empty">No classes scheduled today</div></div>`
-    : todays.map(t => {
-        const s = subj(t.subj);
-        const key = todayStr + '|' + t.subj + '|' + t.start;
-        const r = S.records[key];
-        const info = `<span class="dot" style="background:${s.color}"></span>
-          <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${t.start} - ${t.end}</span></span>`;
-        if (r && r.status === 'Pending') {
-          return `<div class="swipe-wrap">
-            <div class="swipe-bg"></div>
-            <div class="swipe-card" data-key="${key}">
-              <div class="row">
-                ${info}
-                <span class="yn">
-                  <button class="yes" data-key="${key}" data-set="Present" aria-label="Present">${ICONS.check}</button>
-                  <button class="no"  data-key="${key}" data-set="Absent" aria-label="Absent">${ICONS.cross}</button>
-                  <button class="nc"  data-key="${key}" data-set="Cancelled" aria-label="No Class">${ICONS.block}</button>
-                </span>
+  const allAnswered = todays.length > 0 && todays.every(t => {
+    const r = S.records[todayStr + '|' + t.subj + '|' + t.start];
+    return r && r.status !== 'Pending';
+  });
+  const toggle = $('#toggleTodayList');
+  toggle.hidden = !allAnswered;
+  toggle.textContent = showTodayFull ? "Hide Today's List" : "View/Alter Today's List";
+
+  if (allAnswered && !showTodayFull) {
+    // APK's green "Today's Classes Done!" card
+    $('#todayList').innerHTML = `<div class="done-card">
+      <div class="circle">${ICONS.check}</div>
+      <div class="dt">Today's Classes Done!</div>
+      <div class="ds">All of today's attendance checks have been successfully logged.</div>
+    </div>`;
+  } else {
+    $('#todayList').innerHTML = !working
+      ? `<div class="card"><div class="empty">Holiday — no classes today</div></div>`
+      : !todays.length ? `<div class="card"><div class="empty">No classes scheduled today</div></div>`
+      : todays.map(t => {
+          const s = subj(t.subj);
+          const key = todayStr + '|' + t.subj + '|' + t.start;
+          const r = S.records[key];
+          const info = `<span class="dot" style="background:${s.color}"></span>
+            <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${t.start} - ${t.end}</span></span>`;
+          if (r && r.status === 'Pending') {
+            return `<div class="swipe-wrap">
+              <div class="swipe-bg"></div>
+              <div class="swipe-card" data-key="${key}">
+                <div class="row">
+                  ${info}
+                  <span class="yn">
+                    <button class="yes" data-key="${key}" data-set="Present" aria-label="Present">${ICONS.check}</button>
+                    <button class="no"  data-key="${key}" data-set="Absent" aria-label="Absent">${ICONS.cross}</button>
+                    <button class="nc"  data-key="${key}" data-set="Cancelled" aria-label="No Class">${ICONS.block}</button>
+                  </span>
+                </div>
               </div>
-            </div>
+            </div>`;
+          }
+          return `<div class="sched-card">
+            ${info}
+            ${r ? `<span class="badge ${r.status}">${statusLabel(r.status)}</span>
+                   <button class="clearbtn" data-clear="${key}" aria-label="Reset to pending">${ICONS.cross}</button>`
+                : `<span class="t2">Upcoming</span>`}
           </div>`;
-        }
-        return `<div class="sched-card">
-          ${info}
-          ${r ? `<span class="badge ${r.status}">${statusLabel(r.status)}</span>
-                 <button class="clearbtn" data-clear="${key}" aria-label="Reset to pending">${ICONS.cross}</button>`
-              : `<span class="t2">Upcoming</span>`}
-        </div>`;
-      }).join('');
+        }).join('');
+  }
   initSwipes();
 }
 
 /* Swipe-to-mark, ported from the APK: left = Present, right = Absent, down = Cancelled ("No Class").
    Thresholds 120px horizontal / 100px vertical; drag clamped to ±250 / 200 like the APK. */
 function initSwipes() {
-  document.querySelectorAll('#todayList .swipe-card').forEach(card => {
+  document.querySelectorAll('#tab-dash .swipe-card').forEach(card => {
     let sx = 0, sy = 0, dx = 0, dy = 0, dir = null, active = false;
     const wrap = card.parentElement;
     const bg = wrap.querySelector('.swipe-bg');
@@ -801,31 +884,39 @@ function renderCal() {
 }
 
 function renderHist() {
-  // Overall % + by-subject stats (moved here from the Dashboard)
-  let P = 0, A = 0;
+  // Summary + by-subject stats (APK's Attendance History header area)
+  const all = recordList();
+  let P=0, A=0, C=0, PD=0;
   const per = {};
-  for (const r of recordList()) {
+  for (const r of all) {
     per[r.subj] ??= { p:0, a:0, pd:0, c:0 };
     if (r.status === 'Present') { P++; per[r.subj].p++; }
     else if (r.status === 'Absent') { A++; per[r.subj].a++; }
-    else if (r.status === 'Cancelled') per[r.subj].c++;
-    else per[r.subj].pd++;
+    else if (r.status === 'Cancelled') { C++; per[r.subj].c++; }
+    else { PD++; per[r.subj].pd++; }
   }
   const ans = P + A, pct = ans ? P*100/ans : null;
   const subjKeys = Object.keys(per).map(Number);
   $('#histStats').innerHTML = `
-    <div class="card hero">
-      <div class="pct ${pct !== null && pct < 75 ? 'low' : ''}">${pct === null ? '—' : pct.toFixed(1) + '%'}</div>
-      <div class="sub">${pct === null ? 'No answered classes yet' : `${P} present · ${A} absent · overall attendance`}</div>
+    <div class="card summary-card">
+      <div class="sl">
+        <div class="h">Summary</div>
+        <div class="tot">Total classes: ${all.length}</div>
+        <div class="brk">P: ${P} | A: ${A} | No Class: ${C} | Pending: ${PD}</div>
+      </div>
+      <div class="sr">
+        <div class="p ${pct !== null && pct < 75 ? 'low' : ''}">${pct === null ? '—' : pct.toFixed(1) + '%'}</div>
+        <div class="l">Attendance</div>
+      </div>
     </div>
-    ${subjKeys.length ? `<h2 class="sec">By subject</h2><div class="card tight">` + subjKeys.map(k => {
+    ${subjKeys.length ? `<div class="card tight">` + subjKeys.map(k => {
       const s = subj(k), v = per[k];
       const an = v.p + v.a, pp = an ? v.p*100/an : null;
       return `<div class="row">
         <span class="dot" style="background:${s.color}"></span>
         <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${v.p} present · ${v.a} absent · ${v.pd} pending${v.c ? ` · ${v.c} no class` : ''}</span></span>
         <span class="pctcell ${pp === null ? '' : (pp < 75 ? 'low' : 'ok')}">${pp === null ? '—' : Math.round(pp) + '%'}</span></div>`;
-    }).join('') + `</div><h2 class="sec">Records</h2>` : ''}`;
+    }).join('') + `</div>` : ''}`;
 
   const fs = $('#fSubject');
   if (fs.options.length === 1) {
@@ -833,27 +924,31 @@ function renderHist() {
   }
   const sub = fs.value ? Number(fs.value) : null;
   const st = $('#fStatus').value || null;
-  const recs = recordList()
-    .filter(r => (!sub || r.subj === sub) && (!st || r.status === st))
-    .sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
-  let html = '', lastDate = '';
-  for (const r of recs) {
-    if (r.date !== lastDate) { html += `<div class="datehead">${r.date}</div><div class="card tight">`; }
+  const tf = $('#fTime').value || null;
+  let cutoff = null;
+  const today = new Date();
+  if (tf === 'today') cutoff = fmt(today);
+  else if (tf === '7d') { const d = new Date(today); d.setDate(d.getDate() - 6); cutoff = fmt(d); }
+  else if (tf === 'month') cutoff = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+
+  const recs = all
+    .filter(r => (!sub || r.subj === sub) && (!st || r.status === st) && (!cutoff || r.date >= cutoff))
+    .sort((x,y) => (y.date+y.time).localeCompare(x.date+x.time));
+
+  // One card per record, like the APK
+  $('#histList').innerHTML = recs.length ? recs.map(r => {
     const s = subj(r.subj);
-    html += `<div class="row" data-rec="${r.key}" style="cursor:pointer">
+    const dateNice = new Date(r.date + 'T00:00:00').toLocaleDateString('en', { month:'short', day:'2-digit', year:'numeric' });
+    return `<div class="sched-card" data-rec="${r.key}" style="cursor:pointer">
       <span class="dot" style="background:${s.color}"></span>
-      <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${r.time}</span></span>
+      <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${dateNice} • ${r.time}</span></span>
       <span class="badge ${r.status}">${statusLabel(r.status)}</span></div>`;
-    const next = recs[recs.indexOf(r)+1];
-    if (!next || next.date !== r.date) html += '</div>';
-    lastDate = r.date;
-  }
-  $('#histList').innerHTML = html || '<div class="empty">No records match</div>';
+  }).join('') : '<div class="empty">No records match</div>';
 }
 
 /* ---------- interactions ---------- */
 document.addEventListener('click', e => {
-  const t = e.target.closest('button, .row[data-rec], .row[data-entry]');
+  const t = e.target.closest('button, [data-rec], .row[data-entry]');
   if (!t) return;
 
   if (t.dataset.tab) {                       // bottom tabs
@@ -886,6 +981,7 @@ document.addEventListener('click', e => {
     if (r) { r.status = 'Pending'; r.at = Date.now(); save(); renderDash(); renderHist(); }
     return;
   }
+  if (t.id === 'toggleTodayList') { showTodayFull = !showTodayFull; renderDash(); return; }
   if (t.dataset.day) { ttDay = Number(t.dataset.day); renderTT(); return; }
   if (t.dataset.date) { openDayDialog(t.dataset.date); return; }
   if (t.closest('#ttList') && t.dataset.entry) { openEntryDialog(Number(t.dataset.entry)); return; }
@@ -900,6 +996,7 @@ document.addEventListener('click', e => {
 });
 $('#fSubject').addEventListener('change', renderHist);
 $('#fStatus').addEventListener('change', renderHist);
+$('#fTime').addEventListener('change', renderHist);
 
 // Default working-weekday checkboxes (Calendar tab)
 document.addEventListener('change', e => {
