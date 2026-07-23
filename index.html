@@ -156,9 +156,11 @@ h2.sec:first-child { margin-top: 4px; }
 }
 .row:last-child { border-bottom: none; }
 .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-.row .grow { flex: 1; min-width: 0; }
-.row .t1 { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.row .t2 { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
+.row .grow, .sched-card .grow { flex: 1; min-width: 0; }
+.t1 { display: block; font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; }
+.t2 { display: block; font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
+span.t2 { display: inline-block; }
+.grow .t1, .grow .t2 { display: block; }
 .badge {
   font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; flex: none;
 }
@@ -169,15 +171,37 @@ h2.sec:first-child { margin-top: 4px; }
 .pctcell {  font-weight: 800; font-size: 17px; }
 .pctcell.low { color: var(--absent); } .pctcell.ok { color: var(--present); }
 
-.yn { display: flex; gap: 8px; flex: none; }
+/* Round action buttons, matching the APK's circular Present/Absent/No-Class buttons */
+.yn { display: flex; gap: 10px; flex: none; }
 .yn button {
-  width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+  width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center;
   transition: transform .12s;
 }
+.yn button svg { width: 22px; height: 22px; }
 .yn button:active { transform: scale(.9); }
 .yn .yes { background: var(--present-soft); color: var(--present); }
 .yn .no  { background: var(--absent-soft);  color: var(--absent); }
 .yn .nc  { background: var(--amber-soft);   color: var(--amber); }
+.clearbtn {
+  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  color: var(--ink-soft); flex: none;
+}
+.clearbtn svg { width: 16px; height: 16px; }
+
+/* Today's Attendance Status counters (APK StatItem row) */
+.statgrid { display: flex; }
+.statgrid .si { flex: 1; text-align: center; }
+.statgrid .si .n { font-size: 24px; font-weight: 800; line-height: 1.1; }
+.statgrid .si .l { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+.statgrid .si.present .n { color: var(--present); }
+.statgrid .si.absent  .n { color: var(--absent); }
+.statgrid .si.noclass .n { color: var(--amber); }
+.statgrid .si.pending .n { color: var(--pending); }
+.sched-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 10px;
+}
 
 /* ---------- Swipe-to-mark (ported from the APK's DashboardTab drag gesture) ---------- */
 .swipe-wrap { position: relative; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
@@ -342,20 +366,20 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
   </header>
 
   <main>
-    <!-- Dashboard -->
+    <!-- Dashboard — mirrors the APK: title, date, Today's Attendance Status, Today's Schedule -->
     <section class="tab active" id="tab-dash">
       <div id="installHint" class="hint" hidden>
         📲 Install this app: tap <b>Share</b> in Safari, then <b>Add to Home Screen</b>.
       </div>
-      <div class="card hero">
-        <div class="pct" id="heroPct">—</div>
-        <div class="sub" id="heroSub">No answered classes yet</div>
+      <div class="cal-title" style="margin-bottom:0">Dashboard</div>
+      <div id="dashDate" style="font-size:14px;color:var(--ink-soft);margin:2px 2px 16px"></div>
+      <div class="card">
+        <div style="font-weight:700;font-size:15.5px;margin-bottom:12px">Today's Attendance Status</div>
+        <div class="statgrid" id="statGrid"></div>
       </div>
-      <div id="pendingWrap"></div>
-      <h2 class="sec">Today</h2>
-      <div class="card tight" id="todayList"></div>
-      <h2 class="sec">By subject</h2>
-      <div class="card tight" id="statsList"></div>
+      <h2 class="sec">Today's Schedule</h2>
+      <div class="swipe-hint">Swipe a pending card: ← attended · → absent · ↓ class not taken</div>
+      <div id="todayList"></div>
     </section>
 
     <!-- Timetable -->
@@ -380,8 +404,9 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
       <div class="settings-link">Chose the wrong section? <button id="resetBtn">Switch section / reset</button></div>
     </section>
 
-    <!-- History -->
+    <!-- History (also hosts overall % + by-subject stats, moved from Dashboard) -->
     <section class="tab" id="tab-hist">
+      <div id="histStats"></div>
       <div class="filters">
         <select id="fSubject"><option value="">All subjects</option></select>
         <select id="fStatus">
@@ -453,10 +478,10 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
   <h3>Update record</h3>
   <p id="dlgStatusInfo" style="font-size:14px;color:var(--ink-soft);margin-bottom:14px"></p>
   <div class="status-opts">
-    <button class="btn" style="background:var(--present-soft);color:var(--present)" data-status="Present">✓&nbsp; Present</button>
-    <button class="btn" style="background:var(--absent-soft);color:var(--absent)" data-status="Absent">✗&nbsp; Absent</button>
-    <button class="btn" style="background:var(--amber-soft);color:var(--amber)" data-status="Cancelled">⊘&nbsp; No Class</button>
-    <button class="btn" style="background:var(--pending-soft);color:var(--pending)" data-status="Pending">⏳&nbsp; Pending</button>
+    <button class="btn" style="background:var(--present-soft);color:var(--present)" data-status="Present">Present</button>
+    <button class="btn" style="background:var(--absent-soft);color:var(--absent)" data-status="Absent">Absent</button>
+    <button class="btn" style="background:var(--amber-soft);color:var(--amber)" data-status="Cancelled">No Class</button>
+    <button class="btn" style="background:var(--pending-soft);color:var(--pending)" data-status="Pending">Pending</button>
   </div>
   <div class="dlg-actions"><button class="btn ghost" data-close>Cancel</button></div>
 </dialog>
@@ -598,86 +623,78 @@ function recordList() { return Object.entries(S.records).map(([key,r]) => ({ key
 
 const statusLabel = st => st === 'Cancelled' ? 'No Class' : st;
 
+// Clean SVG icons (replaces the ugly text glyphs)
+const ICONS = {
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>',
+  cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  block: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M6.2 6.2l11.6 11.6"/></svg>',
+};
+
+/* Dashboard, mirroring the APK: date header, Today's Attendance Status counters,
+   Today's Schedule cards (pending = swipeable with round buttons; answered = badge + reset). */
 function renderDash() {
-  const recs = recordList();
-  let present = 0, absent = 0;
-  const per = {};
-  for (const r of recs) {
-    per[r.subj] ??= { p:0, a:0, pd:0, c:0 };
-    if (r.status === 'Present') { present++; per[r.subj].p++; }
-    else if (r.status === 'Absent') { absent++; per[r.subj].a++; }
-    else if (r.status === 'Cancelled') per[r.subj].c++;
-    else per[r.subj].pd++;
-  }
-  const answered = present + absent;
-  const pct = answered ? present*100/answered : null;
-  const heroPct = $('#heroPct');
-  heroPct.textContent = pct === null ? '—' : pct.toFixed(1) + '%';
-  heroPct.classList.toggle('low', pct !== null && pct < 75);
-  $('#heroSub').textContent = pct === null ? 'No answered classes yet'
-    : `${present} present · ${absent} absent · overall attendance`;
-
-  // pending prompts
-  const pend = recs.filter(r => r.status === 'Pending')
-    .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)).slice(0, 12);
-  $('#pendingWrap').innerHTML = !pend.length ? '' :
-    `<h2 class="sec">Pending — did you attend?</h2>
-     <div class="swipe-hint">Swipe card: ← attended · → absent · ↓ class not taken</div>` +
-    pend.map(r => {
-      const s = subj(r.subj);
-      return `<div class="swipe-wrap">
-        <div class="swipe-bg"></div>
-        <div class="swipe-card" data-key="${r.key}">
-          <div class="row">
-            <span class="dot" style="background:${s.color}"></span>
-            <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${r.date} · ${r.time}</span></span>
-            <span class="yn">
-              <button class="yes" data-key="${r.key}" data-set="Present" aria-label="Present">✓</button>
-              <button class="no"  data-key="${r.key}" data-set="Absent" aria-label="Absent">✗</button>
-              <button class="nc"  data-key="${r.key}" data-set="Cancelled" aria-label="No Class">⊘</button>
-            </span>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  initSwipes();
-
-  // today
   const now = new Date();
-  const wd = ((now.getDay()+6)%7)+1;
   const todayStr = fmt(now);
+  const wd = ((now.getDay()+6)%7)+1;
+
+  $('#dashDate').textContent = now.toLocaleDateString('en', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+
+  // Today's counters only, like the APK
+  let p=0, a=0, c=0, pd=0;
+  for (const r of recordList()) {
+    if (r.date !== todayStr) continue;
+    if (r.status === 'Present') p++;
+    else if (r.status === 'Absent') a++;
+    else if (r.status === 'Cancelled') c++;
+    else pd++;
+  }
+  $('#statGrid').innerHTML =
+    `<div class="si present"><div class="n">${p}</div><div class="l">Present</div></div>
+     <div class="si absent"><div class="n">${a}</div><div class="l">Absent</div></div>
+     <div class="si noclass"><div class="n">${c}</div><div class="l">No Class</div></div>
+     <div class="si pending"><div class="n">${pd}</div><div class="l">Pending</div></div>`;
+
+  // Today's Schedule
   const working = isWorking(todayStr, wd);
-  const todays = working ? S.timetable.filter(t => t.wd === wd).sort((a,b)=>a.start.localeCompare(b.start)) : [];
+  const todays = working ? S.timetable.filter(t => t.wd === wd).sort((x,y) => x.start.localeCompare(y.start)) : [];
   $('#todayList').innerHTML = !working
-    ? `<div class="empty">🏖️ Holiday — no classes today</div>`
-    : !todays.length ? `<div class="empty">No classes scheduled today</div>`
+    ? `<div class="card"><div class="empty">Holiday — no classes today</div></div>`
+    : !todays.length ? `<div class="card"><div class="empty">No classes scheduled today</div></div>`
     : todays.map(t => {
         const s = subj(t.subj);
-        const r = S.records[todayStr + '|' + t.subj + '|' + t.start];
-        return `<div class="row">
-          <span class="dot" style="background:${s.color}"></span>
-          <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${t.start} – ${t.end}</span></span>
-          ${r ? `<span class="badge ${r.status}">${statusLabel(r.status)}</span>` : '<span class="t2">—</span>'}</div>`;
+        const key = todayStr + '|' + t.subj + '|' + t.start;
+        const r = S.records[key];
+        const info = `<span class="dot" style="background:${s.color}"></span>
+          <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${t.start} - ${t.end}</span></span>`;
+        if (r && r.status === 'Pending') {
+          return `<div class="swipe-wrap">
+            <div class="swipe-bg"></div>
+            <div class="swipe-card" data-key="${key}">
+              <div class="row">
+                ${info}
+                <span class="yn">
+                  <button class="yes" data-key="${key}" data-set="Present" aria-label="Present">${ICONS.check}</button>
+                  <button class="no"  data-key="${key}" data-set="Absent" aria-label="Absent">${ICONS.cross}</button>
+                  <button class="nc"  data-key="${key}" data-set="Cancelled" aria-label="No Class">${ICONS.block}</button>
+                </span>
+              </div>
+            </div>
+          </div>`;
+        }
+        return `<div class="sched-card">
+          ${info}
+          ${r ? `<span class="badge ${r.status}">${statusLabel(r.status)}</span>
+                 <button class="clearbtn" data-clear="${key}" aria-label="Reset to pending">${ICONS.cross}</button>`
+              : `<span class="t2">Upcoming</span>`}
+        </div>`;
       }).join('');
-
-  // per subject ("No Class" excluded from the percentage, like the APK)
-  const keys = Object.keys(per).map(Number);
-  $('#statsList').innerHTML = !keys.length ? `<div class="empty">Stats appear once classes are recorded</div>`
-    : keys.map(k => {
-        const s = subj(k), v = per[k];
-        const ans = v.p + v.a;
-        const p = ans ? v.p*100/ans : null;
-        return `<div class="row">
-          <span class="dot" style="background:${s.color}"></span>
-          <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${v.p} present · ${v.a} absent · ${v.pd} pending${v.c ? ` · ${v.c} no class` : ''}</span></span>
-          <span class="pctcell ${p===null?'':(p<75?'low':'ok')}">${p===null?'—':Math.round(p)+'%'}</span></div>`;
-      }).join('');
+  initSwipes();
 }
 
 /* Swipe-to-mark, ported from the APK: left = Present, right = Absent, down = Cancelled ("No Class").
    Thresholds 120px horizontal / 100px vertical; drag clamped to ±250 / 200 like the APK. */
 function initSwipes() {
-  document.querySelectorAll('#pendingWrap .swipe-card').forEach(card => {
+  document.querySelectorAll('#todayList .swipe-card').forEach(card => {
     let sx = 0, sy = 0, dx = 0, dy = 0, dir = null, active = false;
     const wrap = card.parentElement;
     const bg = wrap.querySelector('.swipe-bg');
@@ -784,6 +801,32 @@ function renderCal() {
 }
 
 function renderHist() {
+  // Overall % + by-subject stats (moved here from the Dashboard)
+  let P = 0, A = 0;
+  const per = {};
+  for (const r of recordList()) {
+    per[r.subj] ??= { p:0, a:0, pd:0, c:0 };
+    if (r.status === 'Present') { P++; per[r.subj].p++; }
+    else if (r.status === 'Absent') { A++; per[r.subj].a++; }
+    else if (r.status === 'Cancelled') per[r.subj].c++;
+    else per[r.subj].pd++;
+  }
+  const ans = P + A, pct = ans ? P*100/ans : null;
+  const subjKeys = Object.keys(per).map(Number);
+  $('#histStats').innerHTML = `
+    <div class="card hero">
+      <div class="pct ${pct !== null && pct < 75 ? 'low' : ''}">${pct === null ? '—' : pct.toFixed(1) + '%'}</div>
+      <div class="sub">${pct === null ? 'No answered classes yet' : `${P} present · ${A} absent · overall attendance`}</div>
+    </div>
+    ${subjKeys.length ? `<h2 class="sec">By subject</h2><div class="card tight">` + subjKeys.map(k => {
+      const s = subj(k), v = per[k];
+      const an = v.p + v.a, pp = an ? v.p*100/an : null;
+      return `<div class="row">
+        <span class="dot" style="background:${s.color}"></span>
+        <span class="grow"><span class="t1">${esc(s.name)}</span><span class="t2">${v.p} present · ${v.a} absent · ${v.pd} pending${v.c ? ` · ${v.c} no class` : ''}</span></span>
+        <span class="pctcell ${pp === null ? '' : (pp < 75 ? 'low' : 'ok')}">${pp === null ? '—' : Math.round(pp) + '%'}</span></div>`;
+    }).join('') + `</div><h2 class="sec">Records</h2>` : ''}`;
+
   const fs = $('#fSubject');
   if (fs.options.length === 1) {
     for (const s of SUBJECTS) fs.insertAdjacentHTML('beforeend', `<option value="${s.key}">${esc(s.name)}</option>`);
@@ -833,9 +876,14 @@ document.addEventListener('click', e => {
     renderAll();
     return;
   }
-  if (t.dataset.key && t.dataset.set) {      // pending yes/no
+  if (t.dataset.key && t.dataset.set) {      // pending yes/no/no-class buttons
     const r = S.records[t.dataset.key];
     if (r) { r.status = t.dataset.set; r.at = Date.now(); save(); renderDash(); renderHist(); }
+    return;
+  }
+  if (t.dataset.clear) {                     // ✕ on an answered card -> back to Pending
+    const r = S.records[t.dataset.clear];
+    if (r) { r.status = 'Pending'; r.at = Date.now(); save(); renderDash(); renderHist(); }
     return;
   }
   if (t.dataset.day) { ttDay = Number(t.dataset.day); renderTT(); return; }
