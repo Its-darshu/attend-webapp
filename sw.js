@@ -1,5 +1,7 @@
-/* Attend PWA service worker — cache-first app shell for offline use. */
-const CACHE = 'attend-v1';
+/* Attend PWA service worker.
+   - index.html: network-first (so app updates reach installed phones), cache fallback for offline.
+   - static assets: cache-first. */
+const CACHE = 'attend-v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -16,18 +18,34 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  const isPage = e.request.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/');
+
+  if (isPage) {
+    // Network-first: always try fresh page, fall back to cache offline.
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => { c.put(e.request, copy); c.put('index.html', res.clone()); });
+          return res;
+        })
+        .catch(() => caches.match(e.request).then(hit => hit || caches.match('index.html')))
+    );
+    return;
+  }
+
+  // Static assets: cache-first with runtime fill.
   e.respondWith(
     caches.match(e.request).then(hit =>
       hit ||
       fetch(e.request).then(res => {
-        // Runtime-cache same-origin files and Google Fonts so the app works offline.
-        const url = new URL(e.request.url);
-        if (res.ok && (url.origin === location.origin || url.hostname.endsWith('gstatic.com') || url.hostname.endsWith('googleapis.com'))) {
+        if (res.ok && url.origin === location.origin) {
           const copy = res.clone();
           caches.open(CACHE).then(c => c.put(e.request, copy));
         }
         return res;
-      }).catch(() => caches.match('index.html'))
+      })
     )
   );
 });

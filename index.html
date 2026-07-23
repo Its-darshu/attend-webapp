@@ -10,59 +10,58 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Attend">
-<meta name="theme-color" content="#F6F1E7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#12151D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAF9FD" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111318" media="(prefers-color-scheme: dark)">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Schibsted+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+/* Material 3 palette matching the Android APK (seed #1565C0) */
 :root {
-  --bg: #F6F1E7;
-  --bg-soft: #EFE7D8;
-  --card: #FFFDF8;
-  --ink: #1A1F2E;
-  --ink-soft: #5A6072;
-  --line: #E2D9C8;
-  --accent: #0F4C3A;
-  --accent-ink: #F6F1E7;
-  --amber: #B26A00;
-  --amber-soft: #F5E3C6;
+  --bg: #FAF9FD;
+  --bg-soft: #EFF1F8;
+  --card: #FFFFFF;
+  --ink: #1A1C1E;
+  --ink-soft: #44474E;
+  --line: #E1E2E8;
+  --accent: #1565C0;
+  --accent-ink: #FFFFFF;
+  --amber: #8A5100;
+  --amber-soft: #FFEBD1;
   --present: #2E7D32;
-  --present-soft: #DDEEDD;
+  --present-soft: #DFF0DF;
   --absent: #C62828;
-  --absent-soft: #F6DCDC;
-  --pending: #B26A00;
-  --pending-soft: #F5E7CC;
-  --radius: 18px;
-  --shadow: 0 1px 2px rgba(26,31,46,.06), 0 6px 18px rgba(26,31,46,.05);
+  --absent-soft: #F9DEDC;
+  --pending: #8A5100;
+  --pending-soft: #F6E6CC;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(26,28,30,.08), 0 4px 12px rgba(26,28,30,.05);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #12151D;
-    --bg-soft: #181C27;
-    --card: #1B2029;
-    --ink: #EDE8DC;
-    --ink-soft: #9BA1B0;
-    --line: #2A3040;
-    --accent: #58B893;
-    --accent-ink: #0E1219;
-    --amber: #E8A94E;
-    --amber-soft: #3A2F1B;
-    --present: #6FCF7A;
-    --present-soft: #1D3320;
-    --absent: #EF7B7B;
-    --absent-soft: #3B2020;
-    --pending: #E8A94E;
-    --pending-soft: #3A2F1B;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+    --bg: #111318;
+    --bg-soft: #1B1E24;
+    --card: #1B1E24;
+    --ink: #E2E2E9;
+    --ink-soft: #A9ACB4;
+    --line: #2B2F36;
+    --accent: #90CAF9;
+    --accent-ink: #0B3055;
+    --amber: #F0BD73;
+    --amber-soft: #3A2E19;
+    --present: #81C784;
+    --present-soft: #1C3220;
+    --absent: #EF9A9A;
+    --absent-soft: #3B2222;
+    --pending: #F0BD73;
+    --pending-soft: #3A2E19;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 4px 12px rgba(0,0,0,.28);
   }
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
 html { height: 100%; }
 body {
-  font-family: 'Schibsted Grotesk', -apple-system, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--ink);
   min-height: 100%;
@@ -70,7 +69,7 @@ body {
   background-image: radial-gradient(circle at 15% 8%, color-mix(in srgb, var(--accent) 6%, transparent) 0%, transparent 45%);
   overscroll-behavior-y: contain;
 }
-h1,h2,h3,.display { font-family: 'Bricolage Grotesque', 'Schibsted Grotesk', sans-serif; }
+h1,h2,h3,.display { font-family: inherit; letter-spacing: -.2px; }
 button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 
 /* ---------- Header ---------- */
@@ -83,7 +82,7 @@ header {
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
 }
-header .brand { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 24px; letter-spacing: -.5px; }
+header .brand {  font-weight: 800; font-size: 24px; letter-spacing: -.5px; }
 header .brand em { font-style: normal; color: var(--accent); }
 header .section-chip {
   font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 999px;
@@ -129,7 +128,7 @@ h2.sec:first-child { margin-top: 4px; }
 /* ---------- Hero stat ---------- */
 .hero { position: relative; overflow: hidden; }
 .hero .pct {
-  font-family: 'Bricolage Grotesque'; font-size: 56px; font-weight: 800;
+   font-size: 56px; font-weight: 800;
   letter-spacing: -2px; line-height: 1; color: var(--accent);
 }
 .hero .pct.low { color: var(--absent); }
@@ -156,7 +155,7 @@ h2.sec:first-child { margin-top: 4px; }
 .badge.Present { background: var(--present-soft); color: var(--present); }
 .badge.Absent  { background: var(--absent-soft);  color: var(--absent); }
 .badge.Pending { background: var(--pending-soft); color: var(--pending); }
-.pctcell { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 17px; }
+.pctcell {  font-weight: 800; font-size: 17px; }
 .pctcell.low { color: var(--absent); } .pctcell.ok { color: var(--present); }
 
 .yn { display: flex; gap: 8px; flex: none; }
@@ -180,7 +179,7 @@ h2.sec:first-child { margin-top: 4px; }
 
 /* ---------- Calendar ---------- */
 .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.cal-head .m { font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 19px; }
+.cal-head .m {  font-weight: 800; font-size: 19px; }
 .cal-head button { width: 38px; height: 38px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
 .cal-grid .wd { text-align: center; font-size: 11px; color: var(--ink-soft); font-weight: 600; padding: 4px 0; }
@@ -202,7 +201,7 @@ select {
   background: var(--card); border: 1px solid var(--line); border-radius: 12px;
   padding: 10px 12px; appearance: none; -webkit-appearance: none;
 }
-.datehead { font-family: 'Bricolage Grotesque'; font-weight: 700; font-size: 13px; color: var(--ink-soft); margin: 16px 4px 6px; }
+.datehead {  font-weight: 700; font-size: 13px; color: var(--ink-soft); margin: 16px 4px 6px; }
 
 /* ---------- FAB ---------- */
 .fab {
@@ -258,7 +257,7 @@ dialog h3 { font-size: 19px; font-weight: 800; margin-bottom: 14px; }
   padding: 18px; margin-bottom: 12px; transition: all .16s; box-shadow: var(--shadow);
 }
 .pick-card .letter {
-  font-family: 'Bricolage Grotesque'; font-weight: 800; font-size: 26px;
+   font-weight: 800; font-size: 26px;
   width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center;
   background: var(--bg-soft); color: var(--ink); transition: all .16s; flex: none;
 }
@@ -825,6 +824,9 @@ if (!S || !S.section) {
 const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 if (isIOS && !standalone) $('#installHint').hidden = false;
+
+// Ask the browser to protect our data from eviction (keeps records for the whole semester+).
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
